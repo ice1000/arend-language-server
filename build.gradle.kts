@@ -50,7 +50,7 @@ val jarDep = task<Jar>("jarDep") {
   group = "build"
   dependsOn(projectArend.task(":cli:jar"), projectArend.task(":base:jar"))
   manifest.attributes["Main-Class"] = "${project.group}.ServerKt"
-  duplicatesStrategy = DuplicatesStrategy.INCLUDE
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
   from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it as Any else zipTree(it) }) {
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
   }

@@ -38,6 +38,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
     if (!Prelude.isInitialized()) {
       Logger.log("Loading prelude...")
       libraryManager.loadLibrary(PreludeResourceLibrary(), typechecking)
+      Logger.log("Done loading prelude.")
     }
     Logger.log("Loading library from path $value...")
     libraryResolver.addLibraryDirectory(value.parent)
