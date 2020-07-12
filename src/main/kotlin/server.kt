@@ -62,6 +62,7 @@ class ArendLanguageServer : LanguageServer, LanguageClientAware {
   override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> {
     val serverCapabilities = ServerCapabilities()
     serverCapabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
+    serverCapabilities.completionProvider = CompletionOptions(true, listOf("QWERTYUIOPASDFGHJKLZXCVBNM.qwertyuiopasdfghjklzxcvbnm+-*/_[]:"))
     serverCapabilities.workspace = WorkspaceServerCapabilities().apply {
       workspaceFolders = WorkspaceFoldersOptions().apply {
         supported = true

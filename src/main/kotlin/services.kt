@@ -6,7 +6,6 @@ import org.arend.frontend.ConcreteReferableProvider
 import org.arend.frontend.FileLibraryResolver
 import org.arend.frontend.PositionComparator
 import org.arend.frontend.library.TimedLibraryManager
-import org.arend.library.LibraryManager
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.typechecking.LibraryArendExtensionProvider
 import org.arend.typechecking.instance.provider.InstanceProviderSet
@@ -24,8 +23,9 @@ class ArendServices : WorkspaceService, TextDocumentService {
   private val errorReporter = ListErrorReporter()
   private val libraryErrorReporter = ListErrorReporter()
   private val libraryResolver = FileLibraryResolver(ArrayList(), errorReporter)
-  private val libraryManager = TimedLibraryManager(libraryResolver, InstanceProviderSet(), errorReporter, libraryErrorReporter, DefinitionRequester.INSTANCE)
-  private val typechecking = TypecheckingOrderingListener(InstanceProviderSet(), ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, LibraryArendExtensionProvider(libraryManager))
+  private val instanceProviders = InstanceProviderSet()
+  private val libraryManager = TimedLibraryManager(libraryResolver, instanceProviders, errorReporter, libraryErrorReporter, DefinitionRequester.INSTANCE)
+  private val typechecking = TypecheckingOrderingListener(instanceProviders, ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, LibraryArendExtensionProvider(libraryManager))
 
   /**
    * Recommended to call in an asynchronous environment.
@@ -38,6 +38,16 @@ class ArendServices : WorkspaceService, TextDocumentService {
   fun reload() {
     for (library in libraryManager.registeredLibraries)
       typechecking.typecheckLibrary(library)
+    reportErrorsToConsole()
+  }
+
+  fun reportErrorsToConsole(clearAfter: Boolean = true) {
+    for (error in errorReporter.errorList) Logger.e(error.toString())
+    for (error in libraryErrorReporter.errorList) Logger.e(error.toString())
+    if (clearAfter) {
+      errorReporter.errorList.clear()
+      libraryErrorReporter.errorList.clear()
+    }
   }
 
   override fun didChangeConfiguration(params: DidChangeConfigurationParams) {
@@ -46,6 +56,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
   override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
     for (change in params.changes) {
       val path = Paths.get(parseURI(change.uri))
+      Logger.log(path.toString())
     }
   }
 
