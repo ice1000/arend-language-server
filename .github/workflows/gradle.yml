@@ -16,7 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        path: arend-io
+        path: arend-language-server
     - uses: actions/checkout@v2
       with:
         repository: JetBrains/Arend
@@ -27,4 +27,6 @@ jobs:
     - uses: eskatos/gradle-command-action@v1
       with:
         wrapper-cache-enabled: false
+        build-root-directory: arend-language-server
+        wrapper-directory: arend-language-server
         arguments: check --info --no-daemon --stacktrace
