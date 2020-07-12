@@ -8,6 +8,8 @@ import org.arend.frontend.PositionComparator
 import org.arend.frontend.library.FileLoadableHeaderLibrary
 import org.arend.frontend.library.TimedLibraryManager
 import org.arend.naming.reference.converter.IdReferableConverter
+import org.arend.prelude.Prelude
+import org.arend.prelude.PreludeResourceLibrary
 import org.arend.typechecking.LibraryArendExtensionProvider
 import org.arend.typechecking.instance.provider.InstanceProviderSet
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener
@@ -33,8 +35,15 @@ class ArendServices : WorkspaceService, TextDocumentService {
    * Recommended to call in an asynchronous environment.
    */
   fun registerLibrary(value: Path) {
-    libraryResolver.registerLibrary(value)
+    if (!Prelude.isInitialized()) {
+      Logger.log("Loading prelude...")
+      libraryManager.loadLibrary(PreludeResourceLibrary(), typechecking)
+    }
+    Logger.log("Loading library from path $value...")
     libraryResolver.addLibraryDirectory(value.parent)
+    val lib = libraryResolver.registerLibrary(value)
+    libraryManager.loadLibrary(lib, typechecking)
+    Logger.log("Library ${lib.name} loaded.")
   }
 
   fun currentLibrary(containing: Path) = libraryManager.registeredLibraries
@@ -88,6 +97,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
 
   override fun completion(position: CompletionParams) = CompletableFuture.supplyAsync<Either<MutableList<CompletionItem>, CompletionList>> {
     val path = Paths.get(parseURI(position.textDocument.uri))
+    Logger.log(libraryManager.registeredLibraries.toString())
     val (lib, inTests) = currentLibrary(path)
         ?: return@supplyAsync Either.forLeft(mutableListOf())
     val modulePath = FileUtils.modulePath(lib.headerFile.parent.relativize(path), FileUtils.EXTENSION)
