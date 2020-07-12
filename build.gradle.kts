@@ -48,6 +48,7 @@ idea {
 
 val jarDep = task<Jar>("jarDep") {
   group = "build"
+  dependsOn(projectArend.task(":cli:jar"), projectArend.task(":base:jar"))
   manifest.attributes["Main-Class"] = "${project.group}.ServerKt"
   duplicatesStrategy = DuplicatesStrategy.INCLUDE
   from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it as Any else zipTree(it) }) {
