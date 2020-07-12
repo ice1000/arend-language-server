@@ -37,7 +37,9 @@ class ArendServices : WorkspaceService, TextDocumentService {
   fun registerLibrary(value: Path) {
     if (!Prelude.isInitialized()) {
       Logger.log("Loading prelude...")
-      libraryManager.loadLibrary(PreludeResourceLibrary(), typechecking)
+      val prelude = PreludeResourceLibrary()
+      Logger.log("Created prelude.")
+      libraryManager.loadLibrary(prelude, typechecking)
       Logger.log("Done loading prelude.")
     }
     Logger.log("Loading library from path $value...")
