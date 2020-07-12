@@ -70,9 +70,13 @@ class ArendLanguageServer : LanguageServer, LanguageClientAware {
     }
     // val clientCapabilities = params.capabilities
     params.rootUri?.let { uri ->
-      sabisu.projectRoot = Paths.get(parseURI(uri))
+      sabisu.registerLibrary(Paths.get(parseURI(uri)))
     }
-    return CompletableFuture.completedFuture(InitializeResult(serverCapabilities))
+
+    return CompletableFuture.supplyAsync {
+      sabisu.reload()
+      InitializeResult(serverCapabilities)
+    }
   }
 
   override fun connect(client: LanguageClient) {
