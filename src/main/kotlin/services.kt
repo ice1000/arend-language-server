@@ -144,18 +144,23 @@ class ArendServices : WorkspaceService, TextDocumentService {
           ?: return super.visitReference(expr, unit)
       val referent = expr.referent
       val nameLength = referent.refName.length
+      Logger.log("refPos = $refPos, inPos = $inPos, nameLen = $nameLength")
       if (refPos.contains(inPos, nameLength)) when (referent) {
         is ConcreteLocatedReferable -> {
           val defPos = referent.data
               ?: return super.visitReference(expr, unit)
           val file = pathOf(lib, defPos.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
-          resolved.add(Location(describeURI(file.toUri()), defPos.toRange(nameLength)))
+          val toRange = defPos.toRange(nameLength)
+          Logger.i("Resolved ConcreteLocatedReferable: $toRange")
+          resolved.add(Location(describeURI(file.toUri()), toRange))
         }
         is ParsedLocalReferable -> {
           val file = pathOf(lib, referent.position.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
-          resolved.add(Location(describeURI(file.toUri()), referent.position.toRange(nameLength)))
+          val toRange = referent.position.toRange(nameLength)
+          Logger.i("Resolved ParsedLocalReferable: $toRange")
+          resolved.add(Location(describeURI(file.toUri()), toRange))
         }
         else -> {
           Logger.w("Unsupported reference: ${referent.javaClass}")
