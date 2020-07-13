@@ -24,11 +24,7 @@ fun String.partitionAroundLast(separator: String): Pair<String, String> = lastIn
 
 fun describeURI(uri: String): String = describeURI(parseURI(uri))
 
-fun describeURI(uri: URI): String =
-    uri.path?.let {
-      val (parent, fileName) = it.partitionAroundLast("/")
-      ".../" + parent.substringAfterLast("/") + fileName
-    } ?: uri.toString()
+fun describeURI(uri: URI): String = uri.toString()
 
 /**
  * Starts a TCP server socket. Blocks until the first

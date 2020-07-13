@@ -60,7 +60,6 @@ class ArendLanguageServer : LanguageServer, LanguageClientAware {
   private val sabisu = ArendServices()
 
   override fun initialize(params: InitializeParams) = CompletableFuture.supplyAsync {
-    Logger.log("Initializing Arend Language Server...")
     val serverCapabilities = ServerCapabilities()
     serverCapabilities.setTextDocumentSync(TextDocumentSyncKind.None)
     serverCapabilities.completionProvider = CompletionOptions(true, listOf("QWERTYUIOPASDFGHJKLZXCVBNM.qwertyuiopasdfghjklzxcvbnm+-*/_[]:"))

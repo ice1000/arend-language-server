@@ -120,9 +120,11 @@ class ArendServices : WorkspaceService, TextDocumentService {
         ?: return@supplyAsync Either.forLeft(mutableListOf())
     val resolved = mutableListOf<Location>()
     lib.getModuleGroup(modulePath, inTests)?.traverseGroup {
-      val ref = it.referable as? ConcreteLocatedReferable
-          ?: return@traverseGroup
-      ref.definition.accept(object : BaseConcreteExpressionVisitor<Unit>(), ConcreteReferableDefinitionVisitor<Unit, Void?> {
+      val ref = it.referable as? ConcreteLocatedReferable ?: run {
+        Logger.w("Unsupported referable: ${it.referable.javaClass}")
+        return@traverseGroup
+      }
+      ref.definition?.accept(object : BaseConcreteExpressionVisitor<Unit>(), ConcreteReferableDefinitionVisitor<Unit, Void?> {
         override fun visitConstructor(def: Concrete.Constructor, params: Unit) = null
         override fun visitClassField(def: Concrete.ClassField, params: Unit) = null
         override fun visitReference(expr: Concrete.ReferenceExpression, unit: Unit): Concrete.Expression {
@@ -134,16 +136,19 @@ class ArendServices : WorkspaceService, TextDocumentService {
             is ConcreteLocatedReferable -> {
               val defPos = referent.data
                   ?: return super.visitReference(expr, unit)
-              val file = pathOf(lib, defPos.module)
+              val file = pathOf(lib, defPos.module)?.toAbsolutePath()
                   ?: return super.visitReference(expr, unit)
               resolved.add(Location(describeURI(file.toUri()), defPos.toRange(nameLength)))
             }
             is ParsedLocalReferable -> {
-              val file = pathOf(lib, referent.position.module)
+              val file = pathOf(lib, referent.position.module)?.toAbsolutePath()
                   ?: return super.visitReference(expr, unit)
               resolved.add(Location(describeURI(file.toUri()), referent.position.toRange(nameLength)))
             }
-            else -> return super.visitReference(expr, unit)
+            else -> {
+              Logger.w("Unsupported reference: ${referent.javaClass}")
+              return super.visitReference(expr, unit)
+            }
           }
           return super.visitReference(expr, unit)
         }
