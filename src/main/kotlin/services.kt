@@ -13,12 +13,14 @@ import org.arend.frontend.reference.ParsedLocalReferable
 import org.arend.library.Library
 import org.arend.library.LibraryManager
 import org.arend.naming.reference.FullModuleReferable
+import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
 import org.arend.term.concrete.BaseConcreteExpressionVisitor
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.ConcreteReferableDefinitionVisitor
+import org.arend.term.group.StaticGroup
 import org.arend.typechecking.LibraryArendExtensionProvider
 import org.arend.typechecking.instance.provider.InstanceProviderSet
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener
@@ -126,16 +128,9 @@ class ArendServices : WorkspaceService, TextDocumentService {
     }
     lib.getModuleGroup(modulePath, inTests)?.traverseGroup {
       when (val ref = it.referable) {
-        is FullModuleReferable -> {
-          val group = lib.getModuleGroup(ref.path, true)
-              ?: lib.getModuleGroup(ref.path, false) ?: return@traverseGroup
-          val redirected = group.referable
-          if (redirected is ConcreteLocatedReferable) resolveTo(redirected)
-        }
+        is FullModuleReferable -> Logger.w("WIP: ${ref.location}")
         is ConcreteLocatedReferable -> resolveTo(ref)
-        else -> {
-          Logger.w("Unsupported referable: ${ref.javaClass}")
-        }
+        else -> Logger.w("Unsupported referable: ${ref.javaClass}")
       }
     }
     Either.forLeft(resolved)
