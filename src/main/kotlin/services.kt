@@ -127,7 +127,10 @@ class ArendServices : WorkspaceService, TextDocumentService {
     fun resolveTo(ref: ConcreteLocatedReferable) {
       ref.definition?.accept(collectDefVisitor(inPos, lib, resolved), Unit)
     }
-    lib.getModuleGroup(modulePath, inTests)?.traverseGroup { group ->
+
+    val topGroup = lib.getModuleGroup(modulePath, inTests) ?: return@supplyAsync Either.forLeft(mutableListOf())
+    Logger.log(topGroup.subgroups.map { it.referable.textRepresentation() to it.referable.javaClass }.toString())
+    topGroup.traverseGroup { group ->
       when (val ref = group.referable) {
         is FullModuleReferable -> {
           val text = Files.readString(FileUtils.sourceFile(basePath(inTests, lib), modulePath))
@@ -135,8 +138,9 @@ class ArendServices : WorkspaceService, TextDocumentService {
           val parser = CommonCliRepl.createParser(text, location, errorReporter)
           val parsedGroup = BuildVisitor(location, errorReporter).visitStatements(parser.statements())
           // I'm sorry :(
-          parsedGroup.subgroups.firstOrNull { it.referable.refName == group.referable.refName }?.let {
-            Logger.log(it.referable.javaClass.toString())
+          Logger.log(ref.textRepresentation())
+          Logger.log(parsedGroup.subgroups.map { it.referable.textRepresentation() to it.referable.javaClass }.toString())
+          parsedGroup.subgroups.firstOrNull { it.referable.textRepresentation() == ref.textRepresentation() }?.let {
             (it.referable as? ConcreteLocatedReferable)?.let(::resolveTo)
           }
         }
