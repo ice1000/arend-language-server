@@ -19,6 +19,17 @@ fun parseURI(uri: String): URI = URI.create(runCatching {
       .replace(" ", "%20")
 }.getOrDefault(uri))
 
+fun String.partitionAroundLast(separator: String): Pair<String, String> = lastIndexOf(separator)
+    .let { substring(0, it) to substring(it, length) }
+
+fun describeURI(uri: String): String = describeURI(parseURI(uri))
+
+fun describeURI(uri: URI): String =
+    uri.path?.let {
+      val (parent, fileName) = it.partitionAroundLast("/")
+      ".../" + parent.substringAfterLast("/") + fileName
+    } ?: uri.toString()
+
 /**
  * Starts a TCP server socket. Blocks until the first
  * client has connected, then returns a pair of IO streams.
