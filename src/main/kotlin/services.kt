@@ -12,6 +12,9 @@ import org.arend.frontend.reference.ConcreteLocatedReferable
 import org.arend.frontend.reference.ParsedLocalReferable
 import org.arend.library.Library
 import org.arend.library.LibraryManager
+import org.arend.naming.reference.FullModuleReferable
+import org.arend.naming.reference.LocalReferable
+import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
@@ -119,12 +122,18 @@ class ArendServices : WorkspaceService, TextDocumentService {
     val (lib, modulePath, inTests) = describe(params.textDocument.uri)
         ?: return@supplyAsync Either.forLeft(mutableListOf())
     val resolved = mutableListOf<Location>()
+    val inPos = params.position
     lib.getModuleGroup(modulePath, inTests)?.traverseGroup {
-      val ref = it.referable as? ConcreteLocatedReferable ?: run {
-        Logger.w("Unsupported referable: ${it.referable.javaClass}")
-        return@traverseGroup
+      visitGroupForDef(it.referable, inPos, lib, resolved)
+    }
+    Either.forLeft(resolved)
+  }
+
+  private fun visitGroupForDef(ref: LocatedReferable, inPos: Position, lib: FileLoadableHeaderLibrary, resolved: MutableList<Location>) {
+    when (ref) {
+      is FullModuleReferable -> {
       }
-      ref.definition?.accept(object : BaseConcreteExpressionVisitor<Unit>(), ConcreteReferableDefinitionVisitor<Unit, Void?> {
+      is ConcreteLocatedReferable -> ref.definition?.accept(object : BaseConcreteExpressionVisitor<Unit>(), ConcreteReferableDefinitionVisitor<Unit, Void?> {
         override fun visitConstructor(def: Concrete.Constructor, params: Unit) = null
         override fun visitClassField(def: Concrete.ClassField, params: Unit) = null
         override fun visitReference(expr: Concrete.ReferenceExpression, unit: Unit): Concrete.Expression {
@@ -132,7 +141,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
               ?: return super.visitReference(expr, unit)
           val referent = expr.referent
           val nameLength = referent.refName.length
-          if (refPos.contains(params.position, nameLength)) when (referent) {
+          if (refPos.contains(inPos, nameLength)) when (referent) {
             is ConcreteLocatedReferable -> {
               val defPos = referent.data
                   ?: return super.visitReference(expr, unit)
@@ -153,8 +162,10 @@ class ArendServices : WorkspaceService, TextDocumentService {
           return super.visitReference(expr, unit)
         }
       }, Unit)
+      else -> {
+        Logger.w("Unsupported referable: ${ref.javaClass}")
+      }
     }
-    Either.forLeft(resolved)
   }
 
   private fun pathOf(lib: FileLoadableHeaderLibrary, module: ModulePath) =
