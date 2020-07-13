@@ -12,6 +12,11 @@ A language server implementation for [Arend], build on top of [lsp4j].
 
 This project is still experimental, use at your own risk.
 
+This repository is only intended to store the source code of the language server
+implementation.
+The changelog is included as a part of [vscode-arend]'s,
+and user guides are scattered in the front-ends' README.
+
 ## Features
 
 + Goto definition
