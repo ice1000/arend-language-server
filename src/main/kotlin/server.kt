@@ -59,11 +59,12 @@ fun main(argv: Array<String>) {
 class ArendLanguageServer : LanguageServer, LanguageClientAware {
   private val sabisu = ArendServices()
 
-  override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> {
+  override fun initialize(params: InitializeParams) = CompletableFuture.supplyAsync {
     Logger.log("Initializing Arend Language Server...")
     val serverCapabilities = ServerCapabilities()
-    serverCapabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
+    serverCapabilities.setTextDocumentSync(TextDocumentSyncKind.None)
     serverCapabilities.completionProvider = CompletionOptions(true, listOf("QWERTYUIOPASDFGHJKLZXCVBNM.qwertyuiopasdfghjklzxcvbnm+-*/_[]:"))
+    serverCapabilities.definitionProvider = true
     serverCapabilities.workspace = WorkspaceServerCapabilities().apply {
       workspaceFolders = WorkspaceFoldersOptions().apply {
         supported = true
@@ -75,10 +76,8 @@ class ArendLanguageServer : LanguageServer, LanguageClientAware {
       sabisu.registerLibrary(Paths.get(parseURI(uri)))
     }
 
-    return CompletableFuture.supplyAsync {
-      sabisu.reload()
-      InitializeResult(serverCapabilities)
-    }
+    sabisu.reload()
+    InitializeResult(serverCapabilities)
   }
 
   override fun connect(client: LanguageClient) {

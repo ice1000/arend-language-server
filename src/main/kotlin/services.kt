@@ -129,18 +129,19 @@ class ArendServices : WorkspaceService, TextDocumentService {
           val refPos = expr.data as? AntlrPosition
               ?: return super.visitReference(expr, unit)
           val referent = expr.referent
-          when {
-            referent is ConcreteLocatedReferable && refPos.contains(params.position, referent.refName.length) -> {
+          val nameLength = referent.refName.length
+          if (refPos.contains(params.position, nameLength)) when (referent) {
+            is ConcreteLocatedReferable -> {
               val defPos = referent.data
                   ?: return super.visitReference(expr, unit)
               val file = pathOf(lib, defPos.module)
                   ?: return super.visitReference(expr, unit)
-              resolved.add(Location(describeURI(file.toUri()), defPos.toRange()))
+              resolved.add(Location(describeURI(file.toUri()), defPos.toRange(nameLength)))
             }
-            referent is ParsedLocalReferable && refPos.contains(params.position, referent.refName.length) -> {
+            is ParsedLocalReferable -> {
               val file = pathOf(lib, referent.position.module)
                   ?: return super.visitReference(expr, unit)
-              resolved.add(Location(describeURI(file.toUri()), referent.position.toRange()))
+              resolved.add(Location(describeURI(file.toUri()), referent.position.toRange(nameLength)))
             }
             else -> return super.visitReference(expr, unit)
           }
@@ -168,7 +169,6 @@ class ArendServices : WorkspaceService, TextDocumentService {
 
   private fun describe(uri: String): Triple<FileLoadableHeaderLibrary, ModulePath, Boolean>? {
     val path = Paths.get(parseURI(uri))
-    Logger.log(libraryManager.registeredLibraries.toString())
     val (lib, inTests) = currentLibrary(path) ?: return null
     val relative = (if (inTests) lib.testBasePath else lib.sourceBasePath).relativize(path)
     val modulePath = FileUtils.modulePath(relative, FileUtils.EXTENSION)

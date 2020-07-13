@@ -14,9 +14,9 @@ operator fun AntlrPosition.contains(sub: AntlrPosition) =
  * Because [LspPosition] is 0-based, while [AntlrPosition] is 1-based.
  */
 fun AntlrPosition.contains(pos: LspPosition, nameLength: Int) =
-    pos.line + 1 == line && pos.character + 1 in column..column + nameLength
+    pos.line + 1 == line && pos.character + 1 in column - nameLength..column
 
-fun AntlrPosition.toRange() = Range(
-    LspPosition(line - 1, column - 1),
-    LspPosition(line - 1, column - 1 + sourceName.length)
+fun AntlrPosition.toRange(nameLength: Int) = Range(
+    LspPosition(line - 1, column - 1 - nameLength),
+    LspPosition(line - 1, column - 1)
 )
