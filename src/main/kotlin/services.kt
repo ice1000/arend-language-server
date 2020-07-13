@@ -129,25 +129,9 @@ class ArendServices : WorkspaceService, TextDocumentService {
     }
 
     val topGroup = lib.getModuleGroup(modulePath, inTests) ?: return@supplyAsync Either.forLeft(mutableListOf())
-    Logger.log(topGroup.subgroups.map { it.referable.textRepresentation() to it.referable.javaClass }.toString())
     topGroup.traverseGroup { group ->
-      when (val ref = group.referable) {
-        is FullModuleReferable -> {
-          val text = Files.readString(FileUtils.sourceFile(basePath(inTests, lib), modulePath))
-          val location = ModuleLocation(lib.name, ModuleLocation.LocationKind.GENERATED, modulePath)
-          val parser = CommonCliRepl.createParser(text, location, errorReporter)
-          val parsedGroup = BuildVisitor(location, errorReporter).visitStatements(parser.statements())
-          // I'm sorry :(
-          Logger.log(ref.textRepresentation())
-          Logger.log(parsedGroup.subgroups.map { it.referable.textRepresentation() to it.referable.javaClass }.toString())
-          parsedGroup.subgroups.firstOrNull { it.referable.textRepresentation() == ref.textRepresentation() }?.let {
-            (it.referable as? ConcreteLocatedReferable)?.let(::resolveTo)
-          }
-        }
-        is ConcreteLocatedReferable -> resolveTo(ref)
-        // TODO: is LocatedReferableImpl ->
-        else -> Logger.w("Unsupported referable: ${ref.javaClass}")
-      }
+      val ref = group.referable
+      if (ref is ConcreteLocatedReferable) resolveTo(ref)
     }
     Either.forLeft(resolved)
   }
