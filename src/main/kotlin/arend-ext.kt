@@ -17,6 +17,6 @@ fun AntlrPosition.contains(pos: LspPosition, nameLength: Int) =
     pos.line + 1 == line && pos.character in column - nameLength..column
 
 fun AntlrPosition.toRange(nameLength: Int) = Range(
-    LspPosition(line - 1, column - nameLength),
-    LspPosition(line - 1, column)
+    LspPosition(line - 1, column - 1),
+    LspPosition(line - 1, column + nameLength - 1)
 )

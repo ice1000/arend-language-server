@@ -8,14 +8,10 @@ import org.arend.frontend.FileLibraryResolver
 import org.arend.frontend.PositionComparator
 import org.arend.frontend.library.FileLoadableHeaderLibrary
 import org.arend.frontend.library.TimedLibraryManager.timeToString
-import org.arend.frontend.parser.BuildVisitor
 import org.arend.frontend.reference.ConcreteLocatedReferable
 import org.arend.frontend.reference.ParsedLocalReferable
-import org.arend.frontend.repl.CommonCliRepl
 import org.arend.library.Library
 import org.arend.library.LibraryManager
-import org.arend.module.ModuleLocation
-import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
@@ -144,23 +140,18 @@ class ArendServices : WorkspaceService, TextDocumentService {
           ?: return super.visitReference(expr, unit)
       val referent = expr.referent
       val nameLength = referent.refName.length
-      Logger.log("refPos = $refPos, inPos = $inPos, nameLen = $nameLength")
       if (refPos.contains(inPos, nameLength)) when (referent) {
         is ConcreteLocatedReferable -> {
           val defPos = referent.data
               ?: return super.visitReference(expr, unit)
           val file = pathOf(lib, defPos.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
-          val toRange = defPos.toRange(nameLength)
-          Logger.i("Resolved ConcreteLocatedReferable: $toRange")
-          resolved.add(Location(describeURI(file.toUri()), toRange))
+          resolved.add(Location(describeURI(file.toUri()), defPos.toRange(nameLength)))
         }
         is ParsedLocalReferable -> {
           val file = pathOf(lib, referent.position.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
-          val toRange = referent.position.toRange(nameLength)
-          Logger.i("Resolved ParsedLocalReferable: $toRange")
-          resolved.add(Location(describeURI(file.toUri()), toRange))
+          resolved.add(Location(describeURI(file.toUri()), referent.position.toRange(nameLength)))
         }
         else -> {
           Logger.w("Unsupported reference: ${referent.javaClass}")
