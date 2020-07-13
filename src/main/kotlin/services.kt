@@ -13,8 +13,6 @@ import org.arend.frontend.reference.ParsedLocalReferable
 import org.arend.library.Library
 import org.arend.library.LibraryManager
 import org.arend.naming.reference.FullModuleReferable
-import org.arend.naming.reference.LocalReferable
-import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
@@ -123,48 +121,53 @@ class ArendServices : WorkspaceService, TextDocumentService {
         ?: return@supplyAsync Either.forLeft(mutableListOf())
     val resolved = mutableListOf<Location>()
     val inPos = params.position
+    fun resolveTo(ref: ConcreteLocatedReferable) {
+      ref.definition?.accept(collectDefVisitor(inPos, lib, resolved), Unit)
+    }
     lib.getModuleGroup(modulePath, inTests)?.traverseGroup {
-      visitGroupForDef(it.referable, inPos, lib, resolved)
+      when (val ref = it.referable) {
+        is FullModuleReferable -> {
+          val group = lib.getModuleGroup(ref.path, true)
+              ?: lib.getModuleGroup(ref.path, false) ?: return@traverseGroup
+          val redirected = group.referable
+          if (redirected is ConcreteLocatedReferable) resolveTo(redirected)
+        }
+        is ConcreteLocatedReferable -> resolveTo(ref)
+        else -> {
+          Logger.w("Unsupported referable: ${ref.javaClass}")
+        }
+      }
     }
     Either.forLeft(resolved)
   }
 
-  private fun visitGroupForDef(ref: LocatedReferable, inPos: Position, lib: FileLoadableHeaderLibrary, resolved: MutableList<Location>) {
-    when (ref) {
-      is FullModuleReferable -> {
-      }
-      is ConcreteLocatedReferable -> ref.definition?.accept(object : BaseConcreteExpressionVisitor<Unit>(), ConcreteReferableDefinitionVisitor<Unit, Void?> {
-        override fun visitConstructor(def: Concrete.Constructor, params: Unit) = null
-        override fun visitClassField(def: Concrete.ClassField, params: Unit) = null
-        override fun visitReference(expr: Concrete.ReferenceExpression, unit: Unit): Concrete.Expression {
-          val refPos = expr.data as? AntlrPosition
+  private fun collectDefVisitor(inPos: Position, lib: FileLoadableHeaderLibrary, resolved: MutableList<Location>) = object : BaseConcreteExpressionVisitor<Unit>(), ConcreteReferableDefinitionVisitor<Unit, Void?> {
+    override fun visitConstructor(def: Concrete.Constructor, params: Unit) = null
+    override fun visitClassField(def: Concrete.ClassField, params: Unit) = null
+    override fun visitReference(expr: Concrete.ReferenceExpression, unit: Unit): Concrete.Expression {
+      val refPos = expr.data as? AntlrPosition
+          ?: return super.visitReference(expr, unit)
+      val referent = expr.referent
+      val nameLength = referent.refName.length
+      if (refPos.contains(inPos, nameLength)) when (referent) {
+        is ConcreteLocatedReferable -> {
+          val defPos = referent.data
               ?: return super.visitReference(expr, unit)
-          val referent = expr.referent
-          val nameLength = referent.refName.length
-          if (refPos.contains(inPos, nameLength)) when (referent) {
-            is ConcreteLocatedReferable -> {
-              val defPos = referent.data
-                  ?: return super.visitReference(expr, unit)
-              val file = pathOf(lib, defPos.module)?.toAbsolutePath()
-                  ?: return super.visitReference(expr, unit)
-              resolved.add(Location(describeURI(file.toUri()), defPos.toRange(nameLength)))
-            }
-            is ParsedLocalReferable -> {
-              val file = pathOf(lib, referent.position.module)?.toAbsolutePath()
-                  ?: return super.visitReference(expr, unit)
-              resolved.add(Location(describeURI(file.toUri()), referent.position.toRange(nameLength)))
-            }
-            else -> {
-              Logger.w("Unsupported reference: ${referent.javaClass}")
-              return super.visitReference(expr, unit)
-            }
-          }
+          val file = pathOf(lib, defPos.module)?.toAbsolutePath()
+              ?: return super.visitReference(expr, unit)
+          resolved.add(Location(describeURI(file.toUri()), defPos.toRange(nameLength)))
+        }
+        is ParsedLocalReferable -> {
+          val file = pathOf(lib, referent.position.module)?.toAbsolutePath()
+              ?: return super.visitReference(expr, unit)
+          resolved.add(Location(describeURI(file.toUri()), referent.position.toRange(nameLength)))
+        }
+        else -> {
+          Logger.w("Unsupported reference: ${referent.javaClass}")
           return super.visitReference(expr, unit)
         }
-      }, Unit)
-      else -> {
-        Logger.w("Unsupported referable: ${ref.javaClass}")
       }
+      return super.visitReference(expr, unit)
     }
   }
 
