@@ -8,19 +8,20 @@ import org.arend.frontend.FileLibraryResolver
 import org.arend.frontend.PositionComparator
 import org.arend.frontend.library.FileLoadableHeaderLibrary
 import org.arend.frontend.library.TimedLibraryManager.timeToString
+import org.arend.frontend.parser.BuildVisitor
 import org.arend.frontend.reference.ConcreteLocatedReferable
 import org.arend.frontend.reference.ParsedLocalReferable
+import org.arend.frontend.repl.CommonCliRepl
 import org.arend.library.Library
 import org.arend.library.LibraryManager
+import org.arend.module.ModuleLocation
 import org.arend.naming.reference.FullModuleReferable
-import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
 import org.arend.term.concrete.BaseConcreteExpressionVisitor
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.ConcreteReferableDefinitionVisitor
-import org.arend.term.group.StaticGroup
 import org.arend.typechecking.LibraryArendExtensionProvider
 import org.arend.typechecking.instance.provider.InstanceProviderSet
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener
@@ -126,10 +127,21 @@ class ArendServices : WorkspaceService, TextDocumentService {
     fun resolveTo(ref: ConcreteLocatedReferable) {
       ref.definition?.accept(collectDefVisitor(inPos, lib, resolved), Unit)
     }
-    lib.getModuleGroup(modulePath, inTests)?.traverseGroup {
-      when (val ref = it.referable) {
-        is FullModuleReferable -> Logger.w("WIP: ${ref.location}")
+    lib.getModuleGroup(modulePath, inTests)?.traverseGroup { group ->
+      when (val ref = group.referable) {
+        is FullModuleReferable -> {
+          val text = Files.readString(FileUtils.sourceFile(basePath(inTests, lib), modulePath))
+          val location = ModuleLocation(lib.name, ModuleLocation.LocationKind.GENERATED, modulePath)
+          val parser = CommonCliRepl.createParser(text, location, errorReporter)
+          val parsedGroup = BuildVisitor(location, errorReporter).visitStatements(parser.statements())
+          // I'm sorry :(
+          parsedGroup.subgroups.firstOrNull { it.referable.refName == group.referable.refName }?.let {
+            Logger.log(it.referable.javaClass.toString())
+            (it.referable as? ConcreteLocatedReferable)?.let(::resolveTo)
+          }
+        }
         is ConcreteLocatedReferable -> resolveTo(ref)
+        // TODO: is LocatedReferableImpl ->
         else -> Logger.w("Unsupported referable: ${ref.javaClass}")
       }
     }
@@ -184,8 +196,11 @@ class ArendServices : WorkspaceService, TextDocumentService {
   private fun describe(uri: String): Triple<FileLoadableHeaderLibrary, ModulePath, Boolean>? {
     val path = Paths.get(parseURI(uri))
     val (lib, inTests) = currentLibrary(path) ?: return null
-    val relative = (if (inTests) lib.testBasePath else lib.sourceBasePath).relativize(path)
+    val relative = basePath(inTests, lib).relativize(path)
     val modulePath = FileUtils.modulePath(relative, FileUtils.EXTENSION)
     return Triple(lib, modulePath, inTests)
   }
+
+  private fun basePath(inTests: Boolean, lib: FileLoadableHeaderLibrary) =
+      if (inTests) lib.testBasePath else lib.sourceBasePath
 }

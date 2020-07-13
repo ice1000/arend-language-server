@@ -16,13 +16,16 @@ repositories {
 dependencies {
   implementation("org.arend:base")
   implementation("org.arend:cli")
+  implementation("org.arend:parser")
   implementation(kotlin("stdlib-jdk8"))
   val lsp4jVersion = "0.9.0"
   implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:$lsp4jVersion")
   // Don't forget to keep it up-to-date with Arend
   val cliVersion = "1.4"
+  val antlrVersion = "4.8"
   implementation(group = "commons-cli", name = "commons-cli", version = cliVersion)
   implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:$lsp4jVersion")
+  implementation("org.antlr:antlr4-runtime:$antlrVersion")
 }
 
 configure<JavaPluginConvention> {
