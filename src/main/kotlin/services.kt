@@ -125,9 +125,13 @@ class ArendServices : WorkspaceService, TextDocumentService {
     }
 
     val topGroup = lib.getModuleGroup(modulePath, inTests) ?: return@supplyAsync Either.forLeft(mutableListOf())
-    topGroup.traverseGroup { group ->
-      val ref = group.referable
-      if (ref is ConcreteLocatedReferable) resolveTo(ref)
+    val searchGroup = topGroup.subgroups.lastOrNull { group ->
+      // This may fail, but no failure is observed so far
+      val ref = group.referable as ConcreteLocatedReferable
+      ref.data!!.line <= inPos.line + 1
+    } ?: topGroup
+    searchGroup.traverseGroup { group ->
+      resolveTo(group.referable as ConcreteLocatedReferable)
     }
     Either.forLeft(resolved)
   }
