@@ -101,7 +101,10 @@ class ArendServices : WorkspaceService, TextDocumentService {
 
   override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
     for (change in params.changes) {
-      val (lib, modulePath, inTests) = describe(change.uri) ?: return
+      val (lib, modulePath, inTests) = describe(change.uri) ?: run {
+        Logger.w("Failed to find the module corresponds to ${change.uri}")
+        return
+      }
       if (inTests) {
         Logger.w("Cannot update test modules at this moment")
         // TODO: update test modules
