@@ -101,8 +101,16 @@ class ArendServices : WorkspaceService, TextDocumentService {
 
   override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
     for (change in params.changes) {
-      val path = Paths.get(parseURI(change.uri))
-      Logger.log(path.toString())
+      val (lib, modulePath, inTests) = describe(change.uri) ?: return
+      if (inTests) {
+        Logger.w("Cannot update test modules at this moment")
+        // TODO: update test modules
+        // typechecking.typecheckTests(lib)
+      } else {
+        Logger.i("Reloading module $modulePath from library ${lib.name}'s src")
+        lib.updateModule(modulePath)
+        typechecking.typecheckLibrary(lib)
+      }
     }
   }
 
@@ -116,16 +124,6 @@ class ArendServices : WorkspaceService, TextDocumentService {
   }
 
   override fun didSave(params: DidSaveTextDocumentParams) {
-    val (lib, modulePath, inTests) = describe(params.textDocument.uri) ?: return
-    if (inTests) {
-      Logger.w("Cannot update test modules at this moment")
-      // TODO: update test modules
-      // typechecking.typecheckTests(lib)
-    } else {
-      Logger.i("Reloading module $modulePath from library ${lib.name}'s src")
-      lib.updateModule(modulePath)
-      typechecking.typecheckLibrary(lib)
-    }
   }
 
   override fun definition(params: DefinitionParams) = CompletableFuture.supplyAsync<Either<MutableList<out Location>, MutableList<out LocationLink>>> {
