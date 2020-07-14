@@ -64,6 +64,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
     libraryResolver.addLibraryDirectory(value.parent)
     val lib = libraryResolver.registerLibrary(value)
     libraryManager.loadLibrary(lib, typechecking)
+    lib.loadTests(libraryManager)
   }
 
   fun currentLibrary(containing: Path) = libraryManager.registeredLibraries
@@ -130,6 +131,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
       val ref = group.referable as ConcreteLocatedReferable
       ref.data!!.line <= inPos.line + 1
     } ?: topGroup
+    Logger.i("Searching for (${inPos.line}, ${inPos.character}) in ${searchGroup.referable.textRepresentation()}")
     searchGroup.traverseGroup { group ->
       resolveTo(group.referable as ConcreteLocatedReferable)
     }
