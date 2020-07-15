@@ -15,6 +15,7 @@ import org.arend.library.LibraryManager
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
+import org.arend.source.SourceLoader
 import org.arend.term.concrete.BaseConcreteExpressionVisitor
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.ConcreteReferableDefinitionVisitor
@@ -111,7 +112,9 @@ class ArendServices : WorkspaceService, TextDocumentService {
         // typechecking.typecheckTests(lib)
       } else {
         Logger.i("Reloading module $modulePath from library ${lib.name}'s src")
-        lib.updateModule(modulePath)
+        val loader = SourceLoader(lib, libraryManager)
+        loader.preloadRaw(modulePath, inTests)
+        loader.loadRawSources()
         typechecking.typecheckLibrary(lib)
       }
     }
