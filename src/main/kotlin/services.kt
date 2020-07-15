@@ -1,14 +1,16 @@
 package org.ice1000.arend.lsp
 
 import org.arend.ext.error.ListErrorReporter
-import org.arend.ext.module.ModulePath
 import org.arend.frontend.ConcreteReferableProvider
 import org.arend.frontend.FileLibraryResolver
 import org.arend.frontend.PositionComparator
 import org.arend.frontend.library.FileLoadableHeaderLibrary
+import org.arend.frontend.parser.BuildVisitor
 import org.arend.frontend.reference.ConcreteLocatedReferable
 import org.arend.frontend.reference.ParsedLocalReferable
+import org.arend.frontend.repl.CommonCliRepl
 import org.arend.library.Library
+import org.arend.module.ModuleLocation
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
@@ -16,10 +18,10 @@ import org.arend.source.SourceLoader
 import org.arend.term.concrete.BaseConcreteExpressionVisitor
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.ConcreteReferableDefinitionVisitor
+import org.arend.term.group.ChildGroup
 import org.arend.typechecking.LibraryArendExtensionProvider
 import org.arend.typechecking.instance.provider.InstanceProviderSet
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener
-import org.arend.util.FileUtils
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.TextDocumentService
@@ -166,9 +168,10 @@ class ArendServices : WorkspaceService, TextDocumentService {
     }
   }
 
-  private fun pathOf(lib: FileLoadableHeaderLibrary, module: ModulePath) =
-      FileUtils.sourceFile(lib.sourceBasePath, module).takeIf { p -> Files.exists(p) }
-          ?: FileUtils.sourceFile(lib.testBasePath, module).takeIf { p -> Files.exists(p) }
+  fun parse(path: Path, location: ModuleLocation): ChildGroup {
+    val p = CommonCliRepl.createParser(Files.readString(path), location, errorReporter)
+    return BuildVisitor(location, errorReporter).visitStatements(p.statements())
+  }
 
   override fun completion(position: CompletionParams) = CompletableFuture.supplyAsync<Either<MutableList<CompletionItem>, CompletionList>> {
     val group = groupOf(position.textDocument.uri)

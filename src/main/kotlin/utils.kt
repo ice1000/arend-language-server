@@ -10,6 +10,7 @@ import java.net.Socket
 import java.net.URI
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess
@@ -30,6 +31,10 @@ fun String.partitionAroundLast(separator: String): Pair<String, String> = lastIn
 fun describeURI(uri: String): String = describeURI(parseURI(uri))
 
 fun describeURI(uri: URI): String = uri.toString()
+
+fun pathOf(lib: FileLoadableHeaderLibrary, module: ModulePath) =
+    FileUtils.sourceFile(lib.sourceBasePath, module).takeIf { p -> Files.exists(p) }
+        ?: FileUtils.sourceFile(lib.testBasePath, module).takeIf { p -> Files.exists(p) }
 
 /**
  * Starts a TCP server socket. Blocks until the first
