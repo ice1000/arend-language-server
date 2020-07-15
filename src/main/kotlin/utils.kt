@@ -1,5 +1,8 @@
 package org.ice1000.arend.lsp
 
+import org.arend.ext.module.ModulePath
+import org.arend.frontend.library.FileLoadableHeaderLibrary
+import org.arend.util.FileUtils
 import org.eclipse.lsp4j.MessageType
 import java.io.InputStream
 import java.net.ServerSocket
@@ -7,6 +10,8 @@ import java.net.Socket
 import java.net.URI
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 /**
@@ -33,6 +38,28 @@ fun describeURI(uri: URI): String = uri.toString()
 fun tcpStartServer(port: Int) = ServerSocket(port)
     .accept()
     .let { it.inputStream to it.outputStream }
+
+fun basePath(inTests: Boolean, lib: FileLoadableHeaderLibrary) =
+    if (inTests) lib.testBasePath else lib.sourceBasePath
+
+fun ArendServices.groupOf(uri: String) = describe(uri)?.let { (lib, modulePath, inTests) ->
+  lib.getModuleGroup(modulePath, inTests)
+}
+
+data class Description(
+    val lib: FileLoadableHeaderLibrary,
+    val modulePath: ModulePath,
+    val inTests: Boolean,
+    val path: Path
+)
+
+fun ArendServices.describe(uri: String): Description? {
+  val path = Paths.get(parseURI(uri))
+  val (lib, inTests) = currentLibrary(path) ?: return null
+  val relative = basePath(inTests, lib).relativize(path)
+  val modulePath = FileUtils.modulePath(relative, FileUtils.EXTENSION)
+  return Description(lib, modulePath, inTests, path)
+}
 
 class ExitingInputStream(private val delegate: InputStream): InputStream() {
   override fun read(): Int = exitIfNegative { delegate.read() }

@@ -25,7 +25,6 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import org.eclipse.lsp4j.services.WorkspaceService
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import org.arend.frontend.parser.Position as AntlrPosition
@@ -173,19 +172,4 @@ class ArendServices : WorkspaceService, TextDocumentService {
     Logger.log(group.toString())
     Either.forLeft(mutableListOf())
   }
-
-  private fun groupOf(uri: String) = describe(uri)?.let { (lib, modulePath, inTests) ->
-    lib.getModuleGroup(modulePath, inTests)
-  }
-
-  private fun describe(uri: String): Triple<FileLoadableHeaderLibrary, ModulePath, Boolean>? {
-    val path = Paths.get(parseURI(uri))
-    val (lib, inTests) = currentLibrary(path) ?: return null
-    val relative = basePath(inTests, lib).relativize(path)
-    val modulePath = FileUtils.modulePath(relative, FileUtils.EXTENSION)
-    return Triple(lib, modulePath, inTests)
-  }
-
-  private fun basePath(inTests: Boolean, lib: FileLoadableHeaderLibrary) =
-      if (inTests) lib.testBasePath else lib.sourceBasePath
 }
