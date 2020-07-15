@@ -8,6 +8,7 @@ import org.arend.frontend.PositionComparator
 import org.arend.frontend.library.FileLoadableHeaderLibrary
 import org.arend.frontend.reference.ConcreteLocatedReferable
 import org.arend.frontend.reference.ParsedLocalReferable
+import org.arend.library.Library
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
@@ -64,11 +65,13 @@ class ArendServices : WorkspaceService, TextDocumentService {
       .firstOrNull()
 
   fun reload() {
-    for (library in libraryManager.registeredLibraries) {
-      typechecking.typecheckLibrary(library)
-      typechecking.typecheckTests(library, null)
-    }
+    for (library in libraryManager.registeredLibraries) typecheckLibrary(library)
     reportErrorsToConsole()
+  }
+
+  private fun typecheckLibrary(library: Library) {
+    typechecking.typecheckLibrary(library)
+    typechecking.typecheckTests(library, null)
   }
 
   fun reportErrorsToConsole(clearAfter: Boolean = true) {
@@ -94,7 +97,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
       val loader = SourceLoader(lib, libraryManager)
       loader.preloadRaw(modulePath, inTests)
       loader.loadRawSources()
-      typechecking.typecheckLibrary(lib)
+      typecheckLibrary(lib)
     }
   }
 
