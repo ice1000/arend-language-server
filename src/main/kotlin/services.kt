@@ -106,17 +106,12 @@ class ArendServices : WorkspaceService, TextDocumentService {
         Logger.w("Failed to find the module corresponds to ${change.uri}")
         return
       }
-      if (inTests) {
-        Logger.w("Cannot update test modules at this moment")
-        // TODO: update test modules
-        // typechecking.typecheckTests(lib)
-      } else {
-        Logger.i("Reloading module $modulePath from library ${lib.name}'s src")
-        val loader = SourceLoader(lib, libraryManager)
-        loader.preloadRaw(modulePath, inTests)
-        loader.loadRawSources()
-        typechecking.typecheckLibrary(lib)
-      }
+      Logger.i("Reloading module $modulePath from library ${lib.name}'s ${
+        if (inTests) "test" else "source"} directory")
+      val loader = SourceLoader(lib, libraryManager)
+      loader.preloadRaw(modulePath, inTests)
+      loader.loadRawSources()
+      typechecking.typecheckLibrary(lib)
     }
   }
 

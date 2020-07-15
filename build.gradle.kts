@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 val projectArend = gradle.includedBuild("Arend")
 group = "org.ice1000.arend.lsp"
-version = "0.1.1"
+version = "0.1.2"
 
 plugins {
   idea
