@@ -11,6 +11,7 @@ import org.arend.frontend.reference.ParsedLocalReferable
 import org.arend.frontend.repl.CommonCliRepl
 import org.arend.library.Library
 import org.arend.module.ModuleLocation
+import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
@@ -138,7 +139,13 @@ class ArendServices : WorkspaceService, TextDocumentService {
     }.takeUnless { hasFullModuleReferable } ?: topGroup
     Logger.i("Searching for (${inPos.line}, ${inPos.character}) in ${searchGroup.referable.textRepresentation()}")
     searchGroup.traverseGroup { group ->
-      resolveTo(group.referable as ConcreteLocatedReferable)
+      when (val ref = group.referable) {
+        is ConcreteLocatedReferable -> resolveTo(ref)
+        is FullModuleReferable -> {
+          val uri = pathOf(lib, ref.path)?.toUri()
+          if (uri != null) resolved.add(Location(describeURI(uri), Range()))
+        }
+      }
     }
     Either.forLeft(resolved)
   }
