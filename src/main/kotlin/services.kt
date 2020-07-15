@@ -125,12 +125,17 @@ class ArendServices : WorkspaceService, TextDocumentService {
       ref.definition?.accept(collectDefVisitor(inPos, lib, resolved), Unit)
     }
 
-    val topGroup = lib.getModuleGroup(modulePath, inTests) ?: return@supplyAsync Either.forLeft(mutableListOf())
+    val topGroup = lib.getModuleGroup(modulePath, inTests)
+        ?: return@supplyAsync Either.forLeft(mutableListOf())
+    var hasFullModuleReferable = false
     val searchGroup = topGroup.subgroups.lastOrNull { group ->
-      // This may fail, but no failure is observed so far
-      val ref = group.referable as ConcreteLocatedReferable
-      ref.data!!.line <= inPos.line + 1
-    } ?: topGroup
+      val ref = group.referable as? ConcreteLocatedReferable
+      val line = ref?.data?.line ?: run {
+        hasFullModuleReferable = true
+        return@lastOrNull true
+      }
+      line <= inPos.line + 1
+    }.takeUnless { hasFullModuleReferable } ?: topGroup
     Logger.i("Searching for (${inPos.line}, ${inPos.character}) in ${searchGroup.referable.textRepresentation()}")
     searchGroup.traverseGroup { group ->
       resolveTo(group.referable as ConcreteLocatedReferable)
