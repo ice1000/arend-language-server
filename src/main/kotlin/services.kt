@@ -140,12 +140,15 @@ class ArendServices : WorkspaceService, TextDocumentService {
       when (val ref = group.referable) {
         is ConcreteLocatedReferable -> resolveTo(ref)
         is FullModuleReferable -> {
-          Logger.log(ref.location?.modulePath.toString())
-          val uri = ref.location?.modulePath?.let{ pathOf(lib, it)?.toUri() }
+          Logger.w("Doesn't yet support FullModuleReferable")
+/*
+          Logger.log(ref.path.toString())
+          val uri = pathOf(lib, ref.path)?.toUri()
           if (uri != null) {
             resolved.add(Location(describeURI(uri), Range()))
             finalized = true
           }
+*/
         }
       }
     }
