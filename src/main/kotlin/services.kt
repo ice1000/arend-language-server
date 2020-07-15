@@ -2,16 +2,12 @@ package org.ice1000.arend.lsp
 
 import org.arend.ext.error.ListErrorReporter
 import org.arend.ext.module.ModulePath
-import org.arend.extImpl.DefinitionRequester
 import org.arend.frontend.ConcreteReferableProvider
 import org.arend.frontend.FileLibraryResolver
 import org.arend.frontend.PositionComparator
 import org.arend.frontend.library.FileLoadableHeaderLibrary
-import org.arend.frontend.library.TimedLibraryManager.timeToString
 import org.arend.frontend.reference.ConcreteLocatedReferable
 import org.arend.frontend.reference.ParsedLocalReferable
-import org.arend.library.Library
-import org.arend.library.LibraryManager
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
@@ -39,19 +35,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
   private val libraryErrorReporter = ListErrorReporter()
   private val libraryResolver = FileLibraryResolver(ArrayList(), errorReporter)
   private val instanceProviders = InstanceProviderSet()
-  private val libraryManager = object : LibraryManager(libraryResolver, instanceProviders, errorReporter, libraryErrorReporter, DefinitionRequester.INSTANCE) {
-    private val times: Deque<Long> = ArrayDeque()
-    override fun beforeLibraryLoading(library: Library) {
-      Logger.i("[INFO] Loading library " + library.name)
-      times.push(System.currentTimeMillis())
-    }
-
-    override fun afterLibraryLoading(library: Library, successful: Boolean) {
-      val time = System.currentTimeMillis() - times.pop()
-      Logger.i("[INFO] " + (if (successful) "Loaded " else "Failed loading ") + "library " + library.name + if (successful) " (" + timeToString(time) + ")" else "")
-    }
-  }
-
+  private val libraryManager = LspLibraryManager(libraryResolver, instanceProviders, errorReporter, libraryErrorReporter)
   private val typechecking = TypecheckingOrderingListener(instanceProviders, ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, LibraryArendExtensionProvider(libraryManager))
 
   /**
