@@ -94,6 +94,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
       }
       Logger.i("Reloading module $modulePath from library ${lib.name}'s ${
         if (inTests) "test" else "source"} directory")
+      if (inTests) Logger.w("Currently test reloading doesn't work properly")
       val loader = SourceLoader(lib, libraryManager)
       loader.preloadRaw(modulePath, inTests)
       loader.loadRawSources()
