@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 val projectArend = gradle.includedBuild("Arend")
 group = "org.ice1000.arend.lsp"
-version = "0.1.3"
+version = "0.2.0"
 
 plugins {
   idea
@@ -65,6 +65,7 @@ val copyJarDep = task<Copy>("copyJarDep") {
   dependsOn(jarDep)
   from(jarDep.archiveFile.get().asFile)
   into(System.getProperty("user.dir"))
+  rename { "lsp.jar" }
   outputs.upToDateWhen { false }
 }
 
