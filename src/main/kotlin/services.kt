@@ -86,7 +86,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
     typechecking.typecheckTests(library, null)
   }
 
-  fun reportErrors() {
+  private fun reportErrors() {
     val groupLocal = errorReporter.errorList.groupBy(::errorUri)
     for ((uri, errors) in groupLocal) {
       if (uri.isEmpty()) continue
@@ -98,10 +98,8 @@ class ArendServices : WorkspaceService, TextDocumentService {
     for (error in libraryErrorReporter.errorList) {
       IO.e(error.toString())
     }
-    if (true) {
-      errorReporter.errorList.clear()
-      libraryErrorReporter.errorList.clear()
-    }
+    errorReporter.errorList.clear()
+    libraryErrorReporter.errorList.clear()
   }
 
   private fun errorUri(it: GeneralError): String {
@@ -132,6 +130,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
       loader.loadRawSources()
       typecheckLibrary(lib)
     }
+    reportErrors()
   }
 
   override fun didOpen(params: DidOpenTextDocumentParams) {
