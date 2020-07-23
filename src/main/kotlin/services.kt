@@ -1,6 +1,8 @@
 package org.ice1000.arend.lsp
 
+import org.arend.ext.error.GeneralError
 import org.arend.ext.error.ListErrorReporter
+import org.arend.ext.error.LocalError
 import org.arend.frontend.ConcreteReferableProvider
 import org.arend.frontend.FileLibraryResolver
 import org.arend.frontend.PositionComparator
@@ -12,6 +14,7 @@ import org.arend.frontend.repl.CommonCliRepl
 import org.arend.library.Library
 import org.arend.module.ModuleLocation
 import org.arend.naming.reference.FullModuleReferable
+import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
@@ -27,6 +30,7 @@ import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.eclipse.lsp4j.services.WorkspaceService
+import org.eclipse.xtext.xbase.lib.util.ToStringBuilder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -40,6 +44,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
   private val instanceProviders = InstanceProviderSet()
   private val libraryManager = LspLibraryManager(libraryResolver, instanceProviders, errorReporter, libraryErrorReporter)
   private val typechecking = TypecheckingOrderingListener(instanceProviders, ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, LibraryArendExtensionProvider(libraryManager))
+  private var maybeLibrary: FileLoadableHeaderLibrary? = null
 
   /**
    * Recommended to call in an asynchronous environment.
@@ -51,8 +56,11 @@ class ArendServices : WorkspaceService, TextDocumentService {
     }
     libraryResolver.addLibraryDirectory(value.parent)
     val lib = libraryResolver.registerLibrary(value)
-    libraryManager.loadLibrary(lib, typechecking)
-    lib.loadTests(libraryManager)
+    if (lib != null) {
+      if (lib is FileLoadableHeaderLibrary) maybeLibrary = lib
+      libraryManager.loadLibrary(lib, typechecking)
+      lib.loadTests(libraryManager)
+    }
   }
 
   fun currentLibrary(containing: Path) = libraryManager.registeredLibraries
@@ -66,10 +74,11 @@ class ArendServices : WorkspaceService, TextDocumentService {
         }
       }
       .firstOrNull()
+      ?.also { if (maybeLibrary == null) maybeLibrary = it.first }
 
   fun reload() {
     for (library in libraryManager.registeredLibraries) typecheckLibrary(library)
-    reportErrorsToConsole()
+    reportErrors()
   }
 
   private fun typecheckLibrary(library: Library) {
@@ -77,13 +86,33 @@ class ArendServices : WorkspaceService, TextDocumentService {
     typechecking.typecheckTests(library, null)
   }
 
-  fun reportErrorsToConsole(clearAfter: Boolean = true) {
-    for (error in errorReporter.errorList) IO.e(error.toString())
-    for (error in libraryErrorReporter.errorList) IO.e(error.toString())
-    if (clearAfter) {
+  fun reportErrors() {
+    val groupLocal = errorReporter.errorList.groupBy(::errorUri)
+    for ((uri, errors) in groupLocal) {
+      if (uri.isEmpty()) continue
+      IO.reportErrors(PublishDiagnosticsParams(uri, errors.map {
+        // TODO: pass information into
+        Diagnostic()
+      }))
+    }
+    for (error in libraryErrorReporter.errorList) {
+      IO.e(error.toString())
+    }
+    if (true) {
       errorReporter.errorList.clear()
       libraryErrorReporter.errorList.clear()
     }
+  }
+
+  private fun errorUri(it: GeneralError): String {
+    if (it !is LocalError) return ""
+    val ref = it.definition
+    if (ref !is LocatedReferable) return ""
+    val loc = ref.location ?: return ""
+    val lib = libraryManager.getRegisteredLibrary(loc.libraryName)
+        as? FileLoadableHeaderLibrary ?: return ""
+    val path = loc.modulePath?.let { pathOf(lib, it) } ?: return ""
+    return describeURI(path.toUri())
   }
 
   override fun didChangeConfiguration(params: DidChangeConfigurationParams) {
@@ -133,14 +162,13 @@ class ArendServices : WorkspaceService, TextDocumentService {
       val ref = group.referable as ConcreteLocatedReferable
       ref.data!!.line <= inPos.line + 1
     } ?: topGroup
-    IO.i("Searching for (${inPos.line}, ${inPos.character}) in ${searchGroup.referable.textRepresentation()}")
     var finalized = false
     searchGroup.traverseGroup { group ->
       if (finalized) return@traverseGroup
       when (val ref = group.referable) {
         is ConcreteLocatedReferable -> resolveTo(ref)
         is FullModuleReferable -> {
-          IO.w("Doesn't yet support FullModuleReferable")
+          IO.w("Doesn't yet support FullModuleReferable: ${ref.textRepresentation()}")
 /*
           Logger.log(ref.path.toString())
           val uri = pathOf(lib, ref.path)?.toUri()
@@ -151,6 +179,13 @@ class ArendServices : WorkspaceService, TextDocumentService {
 */
         }
       }
+    }
+    for (result in resolved) {
+      @Suppress("UnstableApiUsage")
+      val range = ToStringBuilder(result.range.start)
+          .addDeclaredFields()
+          .singleLine()
+      IO.i("Jumping to ($range) in ${result.uri}")
     }
     Either.forLeft(resolved)
   }

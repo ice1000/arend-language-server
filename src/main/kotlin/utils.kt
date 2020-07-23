@@ -5,6 +5,7 @@ import org.arend.frontend.library.FileLoadableHeaderLibrary
 import org.arend.util.FileUtils
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.services.LanguageClient
 import java.io.InputStream
 import java.net.ServerSocket
@@ -92,10 +93,15 @@ object IO {
     this.client = client
   }
 
+  fun reportErrors(params: PublishDiagnosticsParams) {
+    client?.publishDiagnostics(params)
+  }
+
   fun i(msg: String) = log(msg, MessageType.Info)
   fun e(msg: String) = log(msg, MessageType.Error)
   fun w(msg: String) = log(msg, MessageType.Warning)
-  fun log(msg: String, type: MessageType = MessageType.Log) {
-    client?.logMessage(MessageParams(type, msg))
+  fun log(msg: String, type: MessageType = MessageType.Log) = log(MessageParams(type, msg))
+  fun log(params: MessageParams) {
+    client?.logMessage(params)
   }
 }
