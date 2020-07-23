@@ -32,12 +32,12 @@ class LspLibraryManager(libraryResolver: LibraryResolver, instanceProviders: Ins
   : LibraryManager(libraryResolver, instanceProviders, errorReporter, libraryErrorReporter, DefinitionRequester.INSTANCE) {
   private val times: Deque<Long> = ArrayDeque()
   override fun beforeLibraryLoading(library: Library) {
-    Logger.i("[INFO] Loading library " + library.name)
+    IO.i("[INFO] Loading library " + library.name)
     times.push(System.currentTimeMillis())
   }
 
   override fun afterLibraryLoading(library: Library, successful: Boolean) {
     val time = System.currentTimeMillis() - times.pop()
-    Logger.i("[INFO] " + (if (successful) "Loaded " else "Failed loading ") + "library " + library.name + if (successful) " (" + org.arend.frontend.library.TimedLibraryManager.timeToString(time) + ")" else "")
+    IO.i("[INFO] " + (if (successful) "Loaded " else "Failed loading ") + "library " + library.name + if (successful) " (" + org.arend.frontend.library.TimedLibraryManager.timeToString(time) + ")" else "")
   }
 }

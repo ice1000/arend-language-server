@@ -78,8 +78,8 @@ class ArendServices : WorkspaceService, TextDocumentService {
   }
 
   fun reportErrorsToConsole(clearAfter: Boolean = true) {
-    for (error in errorReporter.errorList) Logger.e(error.toString())
-    for (error in libraryErrorReporter.errorList) Logger.e(error.toString())
+    for (error in errorReporter.errorList) IO.e(error.toString())
+    for (error in libraryErrorReporter.errorList) IO.e(error.toString())
     if (clearAfter) {
       errorReporter.errorList.clear()
       libraryErrorReporter.errorList.clear()
@@ -92,12 +92,12 @@ class ArendServices : WorkspaceService, TextDocumentService {
   override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
     for (change in params.changes) {
       val (lib, modulePath, inTests) = describe(change.uri) ?: run {
-        Logger.w("Failed to find the module corresponds to ${change.uri}")
+        IO.w("Failed to find the module corresponds to ${change.uri}")
         return
       }
-      Logger.i("Reloading module $modulePath from library ${lib.name}'s ${
+      IO.i("Reloading module $modulePath from library ${lib.name}'s ${
         if (inTests) "test" else "source"} directory")
-      if (inTests) Logger.w("Currently test reloading doesn't work properly")
+      if (inTests) IO.w("Currently test reloading doesn't work properly")
       val loader = SourceLoader(lib, libraryManager)
       loader.preloadRaw(modulePath, inTests)
       loader.loadRawSources()
@@ -133,14 +133,14 @@ class ArendServices : WorkspaceService, TextDocumentService {
       val ref = group.referable as ConcreteLocatedReferable
       ref.data!!.line <= inPos.line + 1
     } ?: topGroup
-    Logger.i("Searching for (${inPos.line}, ${inPos.character}) in ${searchGroup.referable.textRepresentation()}")
+    IO.i("Searching for (${inPos.line}, ${inPos.character}) in ${searchGroup.referable.textRepresentation()}")
     var finalized = false
     searchGroup.traverseGroup { group ->
       if (finalized) return@traverseGroup
       when (val ref = group.referable) {
         is ConcreteLocatedReferable -> resolveTo(ref)
         is FullModuleReferable -> {
-          Logger.w("Doesn't yet support FullModuleReferable")
+          IO.w("Doesn't yet support FullModuleReferable")
 /*
           Logger.log(ref.path.toString())
           val uri = pathOf(lib, ref.path)?.toUri()
@@ -177,7 +177,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
           resolved.add(Location(describeURI(file.toUri()), referent.position.toRange(nameLength)))
         }
         else -> {
-          Logger.w("Unsupported reference: ${referent.javaClass}")
+          IO.w("Unsupported reference: ${referent.javaClass}")
           return super.visitReference(expr, unit)
         }
       }
@@ -193,7 +193,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
   override fun completion(position: CompletionParams) = CompletableFuture.supplyAsync<Either<MutableList<CompletionItem>, CompletionList>> {
     val group = groupOf(position.textDocument.uri)
         ?: return@supplyAsync Either.forLeft(mutableListOf())
-    Logger.log(group.toString())
+    IO.log(group.toString())
     Either.forLeft(mutableListOf())
   }
 }

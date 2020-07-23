@@ -79,12 +79,7 @@ class ArendLanguageServer : LanguageServer, LanguageClientAware {
     InitializeResult(serverCapabilities)
   }
 
-  override fun connect(client: LanguageClient) {
-    Logger.initialize { msg, type ->
-      client.logMessage(MessageParams(type, msg))
-    }
-  }
-
+  override fun connect(client: LanguageClient) = IO.initialize(client)
   override fun getWorkspaceService() = sabisu
   override fun getTextDocumentService() = sabisu
   override fun exit() = Unit

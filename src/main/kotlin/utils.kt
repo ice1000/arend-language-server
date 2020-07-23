@@ -3,7 +3,9 @@ package org.ice1000.arend.lsp
 import org.arend.ext.module.ModulePath
 import org.arend.frontend.library.FileLoadableHeaderLibrary
 import org.arend.util.FileUtils
+import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.services.LanguageClient
 import java.io.InputStream
 import java.net.ServerSocket
 import java.net.Socket
@@ -84,16 +86,16 @@ class ExitingInputStream(private val delegate: InputStream): InputStream() {
 fun tcpConnectToClient(host: String, port: Int) =
     Socket(host, port).let { it.inputStream to it.outputStream }
 
-object Logger {
-  private var logging: ((String, MessageType) -> Unit)? = null
-  fun initialize(logging: (String, MessageType) -> Unit) {
-    synchronized(logging) { this.logging = logging }
+object IO {
+  private var client: LanguageClient? = null
+  fun initialize(client: LanguageClient) = synchronized(this) {
+    this.client = client
   }
 
   fun i(msg: String) = log(msg, MessageType.Info)
   fun e(msg: String) = log(msg, MessageType.Error)
   fun w(msg: String) = log(msg, MessageType.Warning)
   fun log(msg: String, type: MessageType = MessageType.Log) {
-    logging?.let { it(msg, type) }
+    client?.logMessage(MessageParams(type, msg))
   }
 }
