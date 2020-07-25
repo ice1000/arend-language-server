@@ -15,6 +15,7 @@ import org.arend.library.Library
 import org.arend.module.ModuleLocation
 import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.LocatedReferable
+import org.arend.naming.reference.TCReferable
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
@@ -45,6 +46,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
   private val libraryManager = LspLibraryManager(libraryResolver, instanceProviders, errorReporter, libraryErrorReporter)
   private val typechecking = TypecheckingOrderingListener(instanceProviders, ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, LibraryArendExtensionProvider(libraryManager))
   private var maybeLibrary: FileLoadableHeaderLibrary? = null
+  private var lastErrorReportedFiles: Collection<String> = emptyList()
 
   /**
    * Recommended to call in an asynchronous environment.
@@ -61,6 +63,20 @@ class ArendServices : WorkspaceService, TextDocumentService {
       libraryManager.loadLibrary(lib, typechecking)
       lib.loadTests(libraryManager)
     }
+  }
+
+  private fun diagnostic(cause: Any?, it: GeneralError): Diagnostic = when (cause) {
+    is AntlrPosition -> Diagnostic(cause.toRange(1), it.toString(), severity(it), "Arend")
+    is TCReferable -> diagnostic(cause.data, it)
+    else -> Diagnostic(Range(), it.toString(), severity(it), "Arend")
+  }
+
+  private fun severity(it: GeneralError) = when (it.level) {
+    GeneralError.Level.INFO -> DiagnosticSeverity.Information
+    GeneralError.Level.WARNING_UNUSED -> DiagnosticSeverity.Hint
+    GeneralError.Level.GOAL -> DiagnosticSeverity.Hint
+    GeneralError.Level.WARNING -> DiagnosticSeverity.Warning
+    GeneralError.Level.ERROR -> DiagnosticSeverity.Error
   }
 
   fun currentLibrary(containing: Path) = libraryManager.registeredLibraries
@@ -88,13 +104,16 @@ class ArendServices : WorkspaceService, TextDocumentService {
 
   private fun reportErrors() {
     val groupLocal = errorReporter.errorList.groupBy(::errorUri)
+    for (file in lastErrorReportedFiles) IO.reportErrors(PublishDiagnosticsParams(file, emptyList()))
+    IO.log("Found ${errorReporter.errorList.size} issues in ${groupLocal.size} files.")
     for ((uri, errors) in groupLocal) {
       if (uri.isEmpty()) continue
       IO.reportErrors(PublishDiagnosticsParams(uri, errors.map {
-        // TODO: pass information into
-        Diagnostic()
+        diagnostic(it.cause, it)
       }))
     }
+    lastErrorReportedFiles = groupLocal.keys
+    IO.e(groupLocal[""]?.joinToString { it.message }.orEmpty())
     for (error in libraryErrorReporter.errorList) {
       IO.e(error.toString())
     }
@@ -123,7 +142,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
         return
       }
       IO.i("Reloading module $modulePath from library ${lib.name}'s ${
-        if (inTests) "test" else "source"} directory")
+      if (inTests) "test" else "source"} directory")
       if (inTests) IO.w("Currently test reloading doesn't work properly")
       val loader = SourceLoader(lib, libraryManager)
       loader.preloadRaw(modulePath, inTests)
@@ -148,7 +167,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
   override fun definition(params: DefinitionParams) = CompletableFuture.supplyAsync<Either<MutableList<out Location>, MutableList<out LocationLink>>> {
     val (lib, modulePath, inTests) = describe(params.textDocument.uri)
         ?: return@supplyAsync Either.forLeft(mutableListOf())
-    val resolved = mutableListOf<Location>()
+    val resolved = mutableListOf<LocationLink>()
     val inPos = params.position
     fun resolveTo(ref: ConcreteLocatedReferable) {
       ref.definition?.accept(collectDefVisitor(inPos, lib, resolved), Unit)
@@ -181,15 +200,15 @@ class ArendServices : WorkspaceService, TextDocumentService {
     }
     for (result in resolved) {
       @Suppress("UnstableApiUsage")
-      val range = ToStringBuilder(result.range.start)
+      val range = ToStringBuilder(result.targetRange.start)
           .addDeclaredFields()
           .singleLine()
-      IO.i("Jumping to ($range) in ${result.uri}")
+      IO.i("Jumping to ($range) in ${result.targetUri}")
     }
-    Either.forLeft(resolved)
+    Either.forRight(resolved)
   }
 
-  private fun collectDefVisitor(inPos: Position, lib: FileLoadableHeaderLibrary, resolved: MutableList<Location>) = object : BaseConcreteExpressionVisitor<Unit>(), ConcreteReferableDefinitionVisitor<Unit, Void?> {
+  private fun collectDefVisitor(inPos: Position, lib: FileLoadableHeaderLibrary, resolved: MutableList<LocationLink>) = object : BaseConcreteExpressionVisitor<Unit>(), ConcreteReferableDefinitionVisitor<Unit, Void?> {
     override fun visitConstructor(def: Concrete.Constructor, params: Unit) = null
     override fun visitClassField(def: Concrete.ClassField, params: Unit) = null
     override fun visitReference(expr: Concrete.ReferenceExpression, unit: Unit): Concrete.Expression {
@@ -203,12 +222,16 @@ class ArendServices : WorkspaceService, TextDocumentService {
               ?: return super.visitReference(expr, unit)
           val file = pathOf(lib, defPos.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
-          resolved.add(Location(describeURI(file.toUri()), defPos.toRange(nameLength)))
+          val range = defPos.toRange(nameLength)
+          val targetRange = Range(range.start, Position(range.start.line + 1, range.start.character))
+          resolved.add(LocationLink(describeURI(file.toUri()), range, targetRange, refPos.toRange(nameLength)))
         }
         is ParsedLocalReferable -> {
           val file = pathOf(lib, referent.position.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
-          resolved.add(Location(describeURI(file.toUri()), referent.position.toRange(nameLength)))
+          val range = referent.position.toRange(nameLength)
+          val targetRange = Range(range.start, Position(range.start.line + 1, range.start.character))
+          resolved.add(LocationLink(describeURI(file.toUri()), range, targetRange, refPos.toRange(nameLength)))
         }
         else -> {
           IO.w("Unsupported reference: ${referent.javaClass}")
