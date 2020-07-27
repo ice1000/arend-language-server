@@ -223,15 +223,13 @@ class ArendServices : WorkspaceService, TextDocumentService {
           val file = pathOf(lib, defPos.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
           val range = defPos.toRange(nameLength)
-          val targetRange = Range(range.start, Position(range.start.line + 1, range.start.character))
-          resolved.add(LocationLink(describeURI(file.toUri()), range, targetRange, refPos.toRange(nameLength)))
+          resolved.add(LocationLink(describeURI(file.toUri()), nextLine(range.start), range, refPos.toRange(nameLength)))
         }
         is ParsedLocalReferable -> {
           val file = pathOf(lib, referent.position.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
           val range = referent.position.toRange(nameLength)
-          val targetRange = Range(range.start, Position(range.start.line + 1, range.start.character))
-          resolved.add(LocationLink(describeURI(file.toUri()), range, targetRange, refPos.toRange(nameLength)))
+          resolved.add(LocationLink(describeURI(file.toUri()), nextLine(range.start), range, refPos.toRange(nameLength)))
         }
         else -> {
           IO.w("Unsupported reference: ${referent.javaClass}")
@@ -240,6 +238,8 @@ class ArendServices : WorkspaceService, TextDocumentService {
       }
       return super.visitReference(expr, unit)
     }
+
+    private fun nextLine(start: Position) = Range(start, Position(start.line + 1, 0))
   }
 
   fun parse(path: Path, location: ModuleLocation): ChildGroup {
