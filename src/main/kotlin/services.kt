@@ -215,7 +215,8 @@ class ArendServices : WorkspaceService, TextDocumentService {
       val refPos = expr.data as? AntlrPosition
           ?: return super.visitReference(expr, unit)
       val referent = expr.referent
-      val nameLength = referent.refName.length
+      val nameLength = referent.refLongName?.toList()?.sumBy { it.length + 1 }?.let { it - 1 }
+          ?: referent.refName.length
       if (refPos.contains(inPos, nameLength)) when (referent) {
         is ConcreteLocatedReferable -> {
           val defPos = referent.data
