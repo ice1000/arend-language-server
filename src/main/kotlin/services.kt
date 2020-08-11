@@ -1,8 +1,10 @@
 package org.ice1000.arend.lsp
 
+import org.arend.core.definition.Definition
 import org.arend.ext.error.GeneralError
 import org.arend.ext.error.ListErrorReporter
 import org.arend.ext.error.LocalError
+import org.arend.ext.reference.ArendRef
 import org.arend.frontend.ConcreteReferableProvider
 import org.arend.frontend.FileLibraryResolver
 import org.arend.frontend.PositionComparator
@@ -25,6 +27,7 @@ import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.ConcreteReferableDefinitionVisitor
 import org.arend.term.group.ChildGroup
 import org.arend.typechecking.LibraryArendExtensionProvider
+import org.arend.typechecking.error.TerminationCheckError
 import org.arend.typechecking.instance.provider.InstanceProviderSet
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener
 import org.eclipse.lsp4j.*
@@ -68,6 +71,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
   private fun diagnostic(cause: Any?, it: GeneralError): Diagnostic = when (cause) {
     is AntlrPosition -> Diagnostic(cause.toRange(1), it.toString(), severity(it), "Arend")
     is TCReferable -> diagnostic(cause.data, it)
+    is Definition -> diagnostic(cause.referable, it)
     else -> Diagnostic(Range(), it.toString(), severity(it), "Arend")
   }
 
@@ -121,9 +125,13 @@ class ArendServices : WorkspaceService, TextDocumentService {
     libraryErrorReporter.errorList.clear()
   }
 
-  private fun errorUri(it: GeneralError): String {
-    if (it !is LocalError) return ""
-    val ref = it.definition
+  private fun errorUri(it: GeneralError) = when (it) {
+    is TerminationCheckError -> errorUri(it.definition)
+    is LocalError -> errorUri(it.definition)
+    else -> ""
+  }
+
+  private fun errorUri(ref: ArendRef?): String {
     if (ref !is LocatedReferable) return ""
     val loc = ref.location ?: return ""
     val lib = libraryManager.getRegisteredLibrary(loc.libraryName)
