@@ -6,7 +6,7 @@ version = "0.2.6"
 
 plugins {
   idea
-  kotlin("jvm") version "1.3.72"
+  kotlin("jvm") version "1.4.0"
 }
 
 repositories {
@@ -17,7 +17,6 @@ dependencies {
   implementation("org.arend:base")
   implementation("org.arend:cli")
   implementation("org.arend:parser")
-  implementation(kotlin("stdlib-jdk8"))
   val lsp4jVersion = "0.9.0"
   implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:$lsp4jVersion")
   // Don't forget to keep it up-to-date with Arend
@@ -36,8 +35,8 @@ configure<JavaPluginConvention> {
 tasks.withType<KotlinCompile> {
   kotlinOptions {
     jvmTarget = "11"
-    languageVersion = "1.3"
-    apiVersion = "1.3"
+    languageVersion = "1.4"
+    apiVersion = "1.4"
     freeCompilerArgs = listOf("-Xjvm-default=enable")
   }
 }
