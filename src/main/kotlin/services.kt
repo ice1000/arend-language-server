@@ -128,7 +128,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
   private fun errorUri(it: GeneralError) = when (it) {
     is TerminationCheckError -> errorUri(it.definition)
     is LocalError -> errorUri(it.definition)
-    else -> ""
+    else -> "".also { IO.log("Unhandled error: ${it.javaClass}") }
   }
 
   private fun errorUri(ref: ArendRef?): String {
