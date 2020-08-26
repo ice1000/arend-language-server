@@ -17,6 +17,17 @@ implementation.
 The list of features and the changelog is included as a part of [vscode-arend]'s,
 and user guides are scattered in the front-ends' README.
 
+## Build
+
+```shell
+$ git clone https://github.com/JetBrains/Arend
+$ git clone https://github.com/ice1000/arend-language-server
+$ cd arend-language-server
+$ ./gradlew copyJarDep
+```
+
+On Windows you may replace `./gradlew` with `gradlew`.
+
 ## Front-Ends
 
 + [vscode-arend]
