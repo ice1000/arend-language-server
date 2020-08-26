@@ -107,20 +107,21 @@ class ArendServices : WorkspaceService, TextDocumentService {
   }
 
   private fun reportErrors() {
-    val groupLocal = errorReporter.errorList.groupBy(::errorUri)
+    val allError = errorReporter.errorList + libraryErrorReporter.errorList
+    val groupLocal = allError.groupBy(::errorUri)
     for (file in lastErrorReportedFiles) IO.reportErrors(PublishDiagnosticsParams(file, emptyList()))
-    IO.log("Found ${errorReporter.errorList.size} issues in ${groupLocal.size} files.")
+    IO.log("Found ${allError.size} issues in ${groupLocal.size} files.")
     for ((uri, errors) in groupLocal) {
-      if (uri.isEmpty()) continue
+      if (uri.isEmpty()) {
+        IO.log(errors.joinToString(prefix = "Unhandled error: ") { it.javaClass.canonicalName })
+        continue
+      }
       IO.reportErrors(PublishDiagnosticsParams(uri, errors.map {
         diagnostic(it.cause, it)
       }))
     }
     lastErrorReportedFiles = groupLocal.keys
     IO.e(groupLocal[""]?.joinToString { it.message }.orEmpty())
-    for (error in libraryErrorReporter.errorList) {
-      IO.e(error.toString())
-    }
     errorReporter.errorList.clear()
     libraryErrorReporter.errorList.clear()
   }
@@ -128,7 +129,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
   private fun errorUri(it: GeneralError) = when (it) {
     is TerminationCheckError -> errorUri(it.definition)
     is LocalError -> errorUri(it.definition)
-    else -> "".also { IO.log("Unhandled error: ${it.javaClass}") }
+    else -> ""
   }
 
   private fun errorUri(ref: ArendRef?): String {
