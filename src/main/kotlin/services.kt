@@ -10,6 +10,7 @@ import org.arend.frontend.FileLibraryResolver
 import org.arend.frontend.PositionComparator
 import org.arend.frontend.library.FileLoadableHeaderLibrary
 import org.arend.frontend.parser.BuildVisitor
+import org.arend.frontend.parser.ParserError
 import org.arend.frontend.reference.ConcreteLocatedReferable
 import org.arend.frontend.reference.ParsedLocalReferable
 import org.arend.frontend.repl.CommonCliRepl
@@ -83,9 +84,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
     GeneralError.Level.ERROR -> DiagnosticSeverity.Error
   }
 
-  fun currentLibrary(containing: Path) = libraryManager.registeredLibraries
-      .asSequence()
-      .filterIsInstance<FileLoadableHeaderLibrary>()
+  fun currentLibrary(containing: Path) = loadedLibraries()
       .mapNotNull {
         when {
           containing.startsWith(it.sourceBasePath) -> it to false
@@ -95,6 +94,11 @@ class ArendServices : WorkspaceService, TextDocumentService {
       }
       .firstOrNull()
       ?.also { if (maybeLibrary == null) maybeLibrary = it.first }
+
+  private fun loadedLibraries() = libraryManager
+      .registeredLibraries
+      .asSequence()
+      .filterIsInstance<FileLoadableHeaderLibrary>()
 
   fun reload() {
     for (library in libraryManager.registeredLibraries) typecheckLibrary(library)
@@ -121,16 +125,21 @@ class ArendServices : WorkspaceService, TextDocumentService {
       }))
     }
     lastErrorReportedFiles = groupLocal.keys
-    IO.e(groupLocal[""]?.joinToString { it.message }.orEmpty())
     errorReporter.errorList.clear()
     libraryErrorReporter.errorList.clear()
   }
 
-  private fun errorUri(it: GeneralError) = when (it) {
-    is TerminationCheckError -> errorUri(it.definition)
-    is LocalError -> errorUri(it.definition)
+  private fun errorUri(e: GeneralError) = when (e) {
+    is TerminationCheckError -> errorUri(e.definition)
+    is LocalError -> errorUri(e.definition)
+    is ParserError -> errorUri(e.position)
     else -> ""
   }
+
+  private fun errorUri(position: AntlrPosition) = maybeLibrary
+      ?.let { pathOf(it, position.module) }
+      ?.let { describeURI(it.toUri()) }
+      .orEmpty()
 
   private fun errorUri(ref: ArendRef?): String {
     if (ref !is LocatedReferable) return ""
