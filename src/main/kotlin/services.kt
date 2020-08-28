@@ -15,6 +15,7 @@ import org.arend.frontend.reference.ConcreteLocatedReferable
 import org.arend.frontend.reference.ParsedLocalReferable
 import org.arend.frontend.repl.CommonCliRepl
 import org.arend.library.Library
+import org.arend.library.error.LibraryIOError
 import org.arend.module.ModuleLocation
 import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.LocatedReferable
@@ -38,6 +39,7 @@ import org.eclipse.lsp4j.services.WorkspaceService
 import org.eclipse.xtext.xbase.lib.util.ToStringBuilder
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import org.arend.frontend.parser.Position as AntlrPosition
@@ -133,6 +135,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
     is TerminationCheckError -> errorUri(e.definition)
     is LocalError -> errorUri(e.definition)
     is ParserError -> errorUri(e.position)
+    is LibraryIOError -> describeUri(Paths.get(e.fileName).toUri())
     else -> ""
   }
 
