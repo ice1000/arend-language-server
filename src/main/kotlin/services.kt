@@ -204,11 +204,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
       ref.data!!.line <= inPos.line + 1
     } ?: topGroup
     val nsCmd = topGroup.namespaceCommands.firstOrNull { nsCmd ->
-      if (nsCmd is SimpleNamespaceCommand) {
-        // TODO: I wish I can get the position directly here :(
-        val line = nsCmd.positionTextRepresentation().substringBefore(":")
-        line.toInt() == inPos.line + 1
-      } else false
+      if (nsCmd is SimpleNamespaceCommand) nsCmd.data.line == inPos.line + 1 else false
     }
     if (nsCmd == null) searchGroup.traverseGroup { group ->
       when (val ref = group.referable) {
@@ -222,9 +218,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
       val uri = pathOf(lib, ModulePath(nsCmd.path))?.toUri()
       if (uri != null) {
         val simpleNsCmd = nsCmd as SimpleNamespaceCommand
-        val (line, column) = simpleNsCmd.positionTextRepresentation().split(":")
-        val defPos = AntlrPosition(ModulePath.fromString(simpleNsCmd.moduleTextRepresentation()), line.toInt(), column.toInt())
-        resolved.add(LocationLink(describeUri(uri), emptyRange, emptyRange, defPos.toRange(moduleNameLength(nsCmd.path))))
+        resolved.add(LocationLink(describeUri(uri), emptyRange, emptyRange, simpleNsCmd.data.toRange(moduleNameLength(nsCmd.path))))
       }
     }
     for (result in resolved) {
