@@ -4,10 +4,12 @@ import org.arend.core.definition.Definition
 import org.arend.ext.error.GeneralError
 import org.arend.ext.error.ListErrorReporter
 import org.arend.ext.error.LocalError
+import org.arend.ext.module.ModulePath
 import org.arend.ext.reference.ArendRef
 import org.arend.frontend.ConcreteReferableProvider
 import org.arend.frontend.FileLibraryResolver
 import org.arend.frontend.PositionComparator
+import org.arend.frontend.group.SimpleNamespaceCommand
 import org.arend.frontend.library.FileLoadableHeaderLibrary
 import org.arend.frontend.parser.BuildVisitor
 import org.arend.frontend.parser.ParserError
@@ -201,22 +203,29 @@ class ArendServices : WorkspaceService, TextDocumentService {
       val ref = group.referable as ConcreteLocatedReferable
       ref.data!!.line <= inPos.line + 1
     } ?: topGroup
-    var finalized = false
-    searchGroup.traverseGroup { group ->
-      if (finalized) return@traverseGroup
+    val nsCmd = topGroup.namespaceCommands.firstOrNull { nsCmd ->
+      if (nsCmd is SimpleNamespaceCommand) {
+        // TODO: I wish I can get the position directly here :(
+        val line = nsCmd.positionTextRepresentation().substringBefore(":")
+        line.toInt() == inPos.line + 1
+      } else false
+    }
+    if (nsCmd == null) searchGroup.traverseGroup { group ->
       when (val ref = group.referable) {
         is ConcreteLocatedReferable -> resolveTo(ref)
         is FullModuleReferable -> {
-          IO.w("Doesn't yet support FullModuleReferable: ${ref.textRepresentation()}")
-/*
-          Logger.log(ref.path.toString())
-          val uri = pathOf(lib, ref.path)?.toUri()
-          if (uri != null) {
-            resolved.add(Location(describeURI(uri), Range()))
-            finalized = true
-          }
-*/
+          IO.w("Unexpected FullModuleReferable: ${ref.textRepresentation()}")
         }
+      }
+    } else {
+      // TODO: handle references in "using" and "hiding"
+      val uri = pathOf(lib, ModulePath(nsCmd.path))?.toUri()
+      if (uri != null) {
+        val simpleNsCmd = nsCmd as SimpleNamespaceCommand
+        val (line, column) = simpleNsCmd.positionTextRepresentation().split(":")
+        val moduleTextRepresentation = simpleNsCmd.moduleTextRepresentation()
+        val defPos = AntlrPosition(ModulePath.fromString(moduleTextRepresentation), line.toInt(), column.toInt())
+        resolved.add(LocationLink(describeUri(uri), Range(), Range(), defPos.toRange(moduleTextRepresentation.length)))
       }
     }
     for (result in resolved) {
