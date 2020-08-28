@@ -77,7 +77,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
     is AntlrPosition -> Diagnostic(cause.toRange(1), it.toString(), severity(it), "Arend")
     is TCReferable -> diagnostic(cause.data, it)
     is Definition -> diagnostic(cause.referable, it)
-    else -> Diagnostic(Range(), it.toString(), severity(it), "Arend")
+    else -> Diagnostic(emptyRange, it.toString(), severity(it), "Arend")
   }
 
   private fun severity(it: GeneralError) = when (it.level) {
@@ -223,9 +223,8 @@ class ArendServices : WorkspaceService, TextDocumentService {
       if (uri != null) {
         val simpleNsCmd = nsCmd as SimpleNamespaceCommand
         val (line, column) = simpleNsCmd.positionTextRepresentation().split(":")
-        val moduleTextRepresentation = simpleNsCmd.moduleTextRepresentation()
-        val defPos = AntlrPosition(ModulePath.fromString(moduleTextRepresentation), line.toInt(), column.toInt())
-        resolved.add(LocationLink(describeUri(uri), Range(), Range(), defPos.toRange(moduleTextRepresentation.length)))
+        val defPos = AntlrPosition(ModulePath.fromString(simpleNsCmd.moduleTextRepresentation()), line.toInt(), column.toInt())
+        resolved.add(LocationLink(describeUri(uri), emptyRange, emptyRange, defPos.toRange(moduleNameLength(nsCmd.path))))
       }
     }
     for (result in resolved) {
@@ -245,7 +244,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
       val refPos = expr.data as? AntlrPosition
           ?: return super.visitReference(expr, unit)
       val referent = expr.referent
-      val nameLength = referent.refLongName?.toList()?.sumBy { it.length + 1 }?.let { it - 1 }
+      val nameLength = referent.refLongName?.toList()?.let(::moduleNameLength)
           ?: referent.refName.length
       if (refPos.contains(inPos, nameLength)) when (referent) {
         is ConcreteLocatedReferable -> {

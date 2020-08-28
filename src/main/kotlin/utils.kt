@@ -3,9 +3,7 @@ package org.ice1000.arend.lsp
 import org.arend.ext.module.ModulePath
 import org.arend.frontend.library.FileLoadableHeaderLibrary
 import org.arend.util.FileUtils
-import org.eclipse.lsp4j.MessageParams
-import org.eclipse.lsp4j.MessageType
-import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.services.LanguageClient
 import java.io.InputStream
 import java.net.ServerSocket
@@ -60,6 +58,10 @@ data class Description(
     val inTests: Boolean,
     val path: Path
 )
+
+val emptyRange = Range(Position(), Position())
+
+fun moduleNameLength(names: Collection<String>) = names.sumBy { it.length + 1 }.let { it - 1 }
 
 fun ArendServices.describe(uri: String): Description? {
   val path = Paths.get(parseURI(uri))
