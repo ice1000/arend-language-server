@@ -37,7 +37,7 @@ fun main(argv: Array<String>) {
       .desc("language client hostname, default localhost")
       .build())
   opt.addOption(Option.builder("i")
-      .longOpt("--interactive")
+      .longOpt("interactive")
       .optionalArg(true)
       .desc("start the Arend REPL")
       .build())

@@ -35,7 +35,9 @@ fun describeUri(uri: URI): String = uri.toString()
 
 fun pathOf(lib: FileLoadableHeaderLibrary, module: ModulePath) =
     FileUtils.sourceFile(lib.sourceBasePath, module).takeIf { p -> Files.exists(p) }
-        ?: FileUtils.sourceFile(lib.testBasePath, module).takeIf { p -> Files.exists(p) }
+        ?: lib.testBasePath
+            ?.let { FileUtils.sourceFile(it, module) }
+            ?.takeIf { p -> Files.exists(p) }
 
 /**
  * Starts a TCP server socket. Blocks until the first
