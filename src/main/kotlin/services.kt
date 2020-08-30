@@ -19,8 +19,10 @@ import org.arend.frontend.repl.CommonCliRepl
 import org.arend.library.Library
 import org.arend.library.error.LibraryIOError
 import org.arend.module.ModuleLocation
+import org.arend.naming.error.NotInScopeError
 import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.LocatedReferable
+import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.TCReferable
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
@@ -135,6 +137,9 @@ class ArendServices : WorkspaceService, TextDocumentService {
 
   private fun errorUri(e: GeneralError) = when (e) {
     is TerminationCheckError -> errorUri(e.definition)
+    is NotInScopeError -> e.referable?.let { errorUri(it) }
+        ?: (e.cause as? AntlrPosition)?.let { errorUri(it) }
+        ?: ""
     is LocalError -> errorUri(e.definition)
     is ParserError -> errorUri(e.position)
     is LibraryIOError -> describeUri(Paths.get(e.fileName))
@@ -147,11 +152,16 @@ class ArendServices : WorkspaceService, TextDocumentService {
       .orEmpty()
 
   private fun errorUri(ref: ArendRef?): String {
-    if (ref !is LocatedReferable) return ""
-    val loc = ref.location ?: return ""
+    fun log(s: String): String {
+      IO.w(s)
+      return ""
+    }
+
+    if (ref !is LocatedReferable) return log("Unsupported ref type: ${ref?.javaClass}")
+    val loc = ref.location ?: return log("No location for ref ${ref.refName}")
     val lib = libraryManager.getRegisteredLibrary(loc.libraryName)
-        as? FileLoadableHeaderLibrary ?: return ""
-    val path = loc.modulePath?.let { pathOf(lib, it) } ?: return ""
+        as? FileLoadableHeaderLibrary ?: return log("Not a loaded library: ${loc.libraryName}")
+    val path = loc.modulePath?.let { pathOf(lib, it) } ?: return log("Cannot find a path corresponds to ${loc.modulePath}")
     return describeUri(path)
   }
 
@@ -238,8 +248,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
       val refPos = expr.data as? AntlrPosition
           ?: return super.visitReference(expr, unit)
       val referent = expr.referent
-      val nameLength = referent.refLongName?.toList()?.let(::moduleNameLength)
-          ?: referent.refName.length
+      val nameLength = referent.refName.length
       if (refPos.contains(inPos, nameLength)) when (referent) {
         is ConcreteLocatedReferable -> {
           val defPos = referent.data
@@ -255,10 +264,10 @@ class ArendServices : WorkspaceService, TextDocumentService {
           val range = referent.position.toRange(nameLength)
           resolved.add(LocationLink(describeUri(file), nextLine(range.start), range, refPos.toRange(nameLength)))
         }
-        else -> {
-          IO.w("Unsupported reference: ${referent.javaClass}")
-          return super.visitReference(expr, unit)
+        is LocatedReferableImpl -> {
+          IO.log("{ref = ${referent.refName}, long = ${referent.refLongName}, parent = ${referent.locatedReferableParent?.javaClass}}")
         }
+        else -> IO.w("Unsupported reference: ${referent.javaClass}")
       }
       return super.visitReference(expr, unit)
     }
