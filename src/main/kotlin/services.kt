@@ -75,11 +75,11 @@ class ArendServices : WorkspaceService, TextDocumentService {
     }
   }
 
-  private fun diagnostic(cause: Any?, it: GeneralError): Diagnostic = when (cause) {
-    is AntlrPosition -> Diagnostic(cause.toRange(1), it.toString(), severity(it), "Arend")
-    is TCReferable -> diagnostic(cause.data, it)
-    is Definition -> diagnostic(cause.referable, it)
-    is Concrete.ReferenceExpression -> diagnostic(cause.data, it)
+  private fun diagnostic(cause: Any?, it: GeneralError, length: Int = 1): Diagnostic = when (cause) {
+    is AntlrPosition -> Diagnostic(cause.toRange(length), it.toString(), severity(it), "Arend")
+    is TCReferable -> diagnostic(cause.data, it, cause.refName.length)
+    is Definition -> diagnostic(cause.referable, it, cause.name.length)
+    is Concrete.ReferenceExpression -> diagnostic(cause.data, it, cause.referent.refName.length)
     else -> {
       IO.w("Unsupported cause: ${cause?.javaClass}")
       Diagnostic(emptyRange, it.toString(), severity(it), "Arend")
@@ -255,8 +255,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
       val nameLength = referent.refName.length
       if (refPos.contains(inPos, nameLength)) when (referent) {
         is ConcreteLocatedReferable -> {
-          val defPos = referent.data
-              ?: return super.visitReference(expr, unit)
+          val defPos = referent.data ?: return super.visitReference(expr, unit)
           val file = pathOf(lib, defPos.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
           val range = defPos.toRange(nameLength)
@@ -268,9 +267,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
           val range = referent.position.toRange(nameLength)
           resolved.add(LocationLink(describeUri(file), nextLine(range.start), range, refPos.toRange(nameLength)))
         }
-        is LocatedReferableImpl -> {
-          IO.log("{ref = ${referent.refName}, long = ${referent.refLongName}, parent = ${referent.locatedReferableParent?.javaClass}}")
-        }
+        is LocatedReferableImpl -> IO.w("Prelude definitions aren't supported yet")
         else -> IO.w("Unsupported reference: ${referent.javaClass}")
       }
       return super.visitReference(expr, unit)
