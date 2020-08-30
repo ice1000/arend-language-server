@@ -4,6 +4,7 @@ import org.apache.commons.cli.DefaultParser
 import org.apache.commons.cli.HelpFormatter
 import org.apache.commons.cli.Option
 import org.apache.commons.cli.Options
+import org.arend.frontend.repl.jline.JLineCliRepl
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient
@@ -35,10 +36,19 @@ fun main(argv: Array<String>) {
       .optionalArg(true)
       .desc("language client hostname, default localhost")
       .build())
+  opt.addOption(Option.builder("i")
+      .longOpt("--interactive")
+      .optionalArg(true)
+      .desc("start the Arend REPL")
+      .build())
 
   val cmdLine = DefaultParser().parse(opt, argv)
   if (cmdLine.hasOption("h")) {
     HelpFormatter().printHelp("arend-lsp [OPTIONS]", opt)
+    return
+  }
+  if (cmdLine.hasOption("i")) {
+    JLineCliRepl.launch(false, emptyList())
     return
   }
 
