@@ -76,7 +76,13 @@ class ArendServices : WorkspaceService, TextDocumentService {
   }
 
   private fun diagnostic(cause: Any?, it: GeneralError, length: Int = 1): Diagnostic = when (cause) {
-    is AntlrPosition -> Diagnostic(cause.toRange(length), it.toString(), severity(it), "Arend")
+    is AntlrPosition -> {
+      val len = when (it) {
+        is NotInScopeError -> it.name.length
+        else -> length
+      }
+      Diagnostic(cause.toRange(len), it.toString(), severity(it), "Arend")
+    }
     is TCReferable -> diagnostic(cause.data, it, cause.refName.length)
     is Definition -> diagnostic(cause.referable, it, cause.name.length)
     is Concrete.ReferenceExpression -> diagnostic(cause.data, it, cause.referent.refName.length)
