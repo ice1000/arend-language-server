@@ -79,7 +79,11 @@ class ArendServices : WorkspaceService, TextDocumentService {
     is AntlrPosition -> {
       val len = when (it) {
         is NotInScopeError -> it.name.length
-        is LocalError -> it.definition.refName.length
+        is LocalError -> {
+          val node = it.causeSourceNode
+          if (node is Concrete.ReferenceExpression) node.referent.refName.length
+          else length
+        }
         else -> length
       }
       Diagnostic(cause.toRange(len), it.toString(), severity(it), "Arend")
