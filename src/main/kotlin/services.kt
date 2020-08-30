@@ -79,6 +79,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
     is AntlrPosition -> {
       val len = when (it) {
         is NotInScopeError -> it.name.length
+        is LocalError -> it.definition.refName.length
         else -> length
       }
       Diagnostic(cause.toRange(len), it.toString(), severity(it), "Arend")
@@ -229,9 +230,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
     if (nsCmd == null) searchGroup.traverseGroup { group ->
       when (val ref = group.referable) {
         is ConcreteLocatedReferable -> resolveTo(ref)
-        is FullModuleReferable -> {
-          IO.w("Unexpected FullModuleReferable: ${ref.textRepresentation()}")
-        }
+        is FullModuleReferable -> IO.w("Unexpected FullModuleReferable: ${ref.textRepresentation()}")
       }
     } else {
       // TODO: handle references in "using" and "hiding"
