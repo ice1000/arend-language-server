@@ -137,13 +137,13 @@ class ArendServices : WorkspaceService, TextDocumentService {
     is TerminationCheckError -> errorUri(e.definition)
     is LocalError -> errorUri(e.definition)
     is ParserError -> errorUri(e.position)
-    is LibraryIOError -> describeUri(Paths.get(e.fileName).toUri())
+    is LibraryIOError -> describeUri(Paths.get(e.fileName))
     else -> ""
   }
 
   private fun errorUri(position: AntlrPosition) = maybeLibrary
       ?.let { pathOf(it, position.module) }
-      ?.let { describeUri(it.toUri()) }
+      ?.let(::describeUri)
       .orEmpty()
 
   private fun errorUri(ref: ArendRef?): String {
@@ -152,7 +152,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
     val lib = libraryManager.getRegisteredLibrary(loc.libraryName)
         as? FileLoadableHeaderLibrary ?: return ""
     val path = loc.modulePath?.let { pathOf(lib, it) } ?: return ""
-    return describeUri(path.toUri())
+    return describeUri(path)
   }
 
   override fun didChangeConfiguration(params: DidChangeConfigurationParams) {
@@ -247,13 +247,13 @@ class ArendServices : WorkspaceService, TextDocumentService {
           val file = pathOf(lib, defPos.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
           val range = defPos.toRange(nameLength)
-          resolved.add(LocationLink(describeUri(file.toUri()), nextLine(range.start), range, refPos.toRange(nameLength)))
+          resolved.add(LocationLink(describeUri(file), nextLine(range.start), range, refPos.toRange(nameLength)))
         }
         is ParsedLocalReferable -> {
           val file = pathOf(lib, referent.position.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
           val range = referent.position.toRange(nameLength)
-          resolved.add(LocationLink(describeUri(file.toUri()), nextLine(range.start), range, refPos.toRange(nameLength)))
+          resolved.add(LocationLink(describeUri(file), nextLine(range.start), range, refPos.toRange(nameLength)))
         }
         else -> {
           IO.w("Unsupported reference: ${referent.javaClass}")

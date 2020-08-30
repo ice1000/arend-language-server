@@ -26,10 +26,9 @@ fun parseURI(uri: String): URI = URI.create(runCatching {
       .replace(" ", "%20")
 }.getOrDefault(uri))
 
-fun String.partitionAroundLast(separator: String): Pair<String, String> = lastIndexOf(separator)
-    .let { substring(0, it) to substring(it, length) }
-
 fun describeUri(uri: String): String = describeUri(parseURI(uri))
+
+fun describeUri(uri: Path): String = describeUri(uri.toUri())
 
 fun describeUri(uri: URI): String = uri.toString()
 
