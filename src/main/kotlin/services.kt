@@ -79,7 +79,11 @@ class ArendServices : WorkspaceService, TextDocumentService {
     is AntlrPosition -> Diagnostic(cause.toRange(1), it.toString(), severity(it), "Arend")
     is TCReferable -> diagnostic(cause.data, it)
     is Definition -> diagnostic(cause.referable, it)
-    else -> Diagnostic(emptyRange, it.toString(), severity(it), "Arend")
+    is Concrete.ReferenceExpression -> diagnostic(cause.data, it)
+    else -> {
+      IO.w("Unsupported cause: ${cause?.javaClass}")
+      Diagnostic(emptyRange, it.toString(), severity(it), "Arend")
+    }
   }
 
   private fun severity(it: GeneralError) = when (it.level) {
