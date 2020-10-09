@@ -35,6 +35,7 @@ import org.arend.term.group.ChildGroup
 import org.arend.typechecking.LibraryArendExtensionProvider
 import org.arend.typechecking.error.TerminationCheckError
 import org.arend.typechecking.instance.provider.InstanceProviderSet
+import org.arend.typechecking.order.dependency.DummyDependencyListener
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -51,7 +52,7 @@ import org.arend.frontend.parser.Position as AntlrPosition
 class ArendServices : WorkspaceService, TextDocumentService {
   private val errorReporter = ListErrorReporter()
   private val libraryErrorReporter = ListErrorReporter()
-  private val libraryResolver = FileLibraryResolver(ArrayList(), errorReporter)
+  private val libraryResolver = FileLibraryResolver(ArrayList(), errorReporter, DummyDependencyListener.INSTANCE)
   private val instanceProviders = InstanceProviderSet()
   private val libraryManager = LspLibraryManager(libraryResolver, instanceProviders, errorReporter, libraryErrorReporter)
   private val typechecking = TypecheckingOrderingListener(instanceProviders, ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, LibraryArendExtensionProvider(libraryManager))
