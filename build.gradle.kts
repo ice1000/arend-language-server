@@ -27,12 +27,12 @@ dependencies {
   implementation("org.antlr:antlr4-runtime:$antlrVersion")
 }
 
-configure<JavaPluginConvention> {
+java {
   sourceCompatibility = JavaVersion.VERSION_11
   targetCompatibility = JavaVersion.VERSION_11
 }
 
-tasks.withType<KotlinCompile> {
+tasks.withType<KotlinCompile>().configureEach {
   kotlinOptions {
     jvmTarget = "11"
     languageVersion = "1.4"
@@ -48,7 +48,7 @@ idea {
   }
 }
 
-val jarDep = task<Jar>("jarDep") {
+val jarDep = tasks.register<Jar>("jarDep") {
   group = "build"
   dependsOn(projectArend.task(":cli:jar"), projectArend.task(":base:jar"))
   manifest.attributes["Main-Class"] = "${project.group}.ServerKt"
@@ -60,7 +60,7 @@ val jarDep = task<Jar>("jarDep") {
   archiveClassifier.set("full")
 }
 
-val copyJarDep = task<Copy>("copyJarDep") {
+val copyJarDep = tasks.register<Copy>("copyJarDep") {
   dependsOn(jarDep)
   from(jarDep.archiveFile.get().asFile)
   into(System.getProperty("user.dir"))
@@ -69,5 +69,5 @@ val copyJarDep = task<Copy>("copyJarDep") {
 }
 
 tasks.withType<Wrapper> {
-  gradleVersion = "6.5"
+  gradleVersion = "6.7"
 }
