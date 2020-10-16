@@ -62,7 +62,7 @@ val jarDep = tasks.register<Jar>("jarDep") {
 
 val copyJarDep = tasks.register<Copy>("copyJarDep") {
   dependsOn(jarDep)
-  from(jarDep.archiveFile.get().asFile)
+  from(jarDep.get().archiveFile.get().asFile)
   into(System.getProperty("user.dir"))
   rename { "lsp.jar" }
   outputs.upToDateWhen { false }
