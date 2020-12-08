@@ -6,7 +6,7 @@ version = "0.3.0"
 
 plugins {
   idea
-  kotlin("jvm") version "1.4.10"
+  kotlin("jvm") version "1.4.20"
 }
 
 repositories {
