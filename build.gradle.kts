@@ -6,7 +6,7 @@ version = "0.3.0"
 
 plugins {
   idea
-  kotlin("jvm") version "1.4.20"
+  kotlin("jvm") version "1.4.32"
 }
 
 repositories {
@@ -17,7 +17,7 @@ dependencies {
   implementation("org.arend:base")
   implementation("org.arend:cli")
   implementation("org.arend:parser")
-  val lsp4jVersion = "0.10.0"
+  val lsp4jVersion = "0.11.0"
   // Don't forget to keep it up-to-date with Arend
   val cliVersion = "1.4"
   val antlrVersion = "4.8"

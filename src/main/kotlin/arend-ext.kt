@@ -1,6 +1,7 @@
 package org.ice1000.arend.lsp
 
 import org.arend.ext.error.ErrorReporter
+import org.arend.ext.typechecking.ListDefinitionListener
 import org.arend.extImpl.DefinitionRequester
 import org.arend.library.Library
 import org.arend.library.LibraryManager
@@ -29,7 +30,7 @@ fun AntlrPosition.toRange(nameLength: Int) = Range(
 )
 
 class LspLibraryManager(libraryResolver: LibraryResolver, instanceProviders: InstanceProviderSet, errorReporter: ErrorReporter, libraryErrorReporter: ErrorReporter)
-  : LibraryManager(libraryResolver, instanceProviders, errorReporter, libraryErrorReporter, DefinitionRequester.INSTANCE) {
+  : LibraryManager(libraryResolver, instanceProviders, errorReporter, libraryErrorReporter, DefinitionRequester.INSTANCE, ListDefinitionListener()) {
   private val times: Deque<Long> = ArrayDeque()
   override fun beforeLibraryLoading(library: Library) {
     IO.i("[INFO] Loading library " + library.name)

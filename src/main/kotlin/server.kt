@@ -6,6 +6,7 @@ import org.apache.commons.cli.Option
 import org.apache.commons.cli.Options
 import org.arend.frontend.repl.jline.JLineCliRepl
 import org.eclipse.lsp4j.*
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageClientAware
@@ -73,7 +74,7 @@ class ArendLanguageServer : LanguageServer, LanguageClientAware {
     val serverCapabilities = ServerCapabilities()
     serverCapabilities.setTextDocumentSync(TextDocumentSyncKind.None)
     serverCapabilities.completionProvider = CompletionOptions(true, listOf("QWERTYUIOPASDFGHJKLZXCVBNM.qwertyuiopasdfghjklzxcvbnm+-*/_[]:"))
-    serverCapabilities.definitionProvider = true
+    serverCapabilities.definitionProvider = Either.forLeft(true)
     serverCapabilities.workspace = WorkspaceServerCapabilities().apply {
       workspaceFolders = WorkspaceFoldersOptions().apply {
         supported = true
