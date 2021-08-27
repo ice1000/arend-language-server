@@ -6,7 +6,7 @@ version = "0.3.0"
 
 plugins {
   idea
-  kotlin("jvm") version "1.4.32"
+  kotlin("jvm") version "1.5.30"
 }
 
 repositories {
@@ -35,8 +35,8 @@ java {
 tasks.withType<KotlinCompile>().configureEach {
   kotlinOptions {
     jvmTarget = "11"
-    languageVersion = "1.4"
-    apiVersion = "1.4"
+    languageVersion = "1.5"
+    apiVersion = "1.5"
     freeCompilerArgs = listOf("-Xjvm-default=enable")
   }
 }
