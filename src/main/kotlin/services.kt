@@ -13,17 +13,13 @@ import org.arend.frontend.group.SimpleNamespaceCommand
 import org.arend.frontend.library.FileLoadableHeaderLibrary
 import org.arend.frontend.parser.BuildVisitor
 import org.arend.frontend.parser.ParserError
-import org.arend.naming.reference.ConcreteLocatedReferable
 import org.arend.frontend.reference.ParsedLocalReferable
 import org.arend.frontend.repl.CommonCliRepl
 import org.arend.library.Library
 import org.arend.library.error.LibraryIOError
 import org.arend.module.ModuleLocation
 import org.arend.naming.error.NotInScopeError
-import org.arend.naming.reference.FullModuleReferable
-import org.arend.naming.reference.LocatedReferable
-import org.arend.naming.reference.LocatedReferableImpl
-import org.arend.naming.reference.TCReferable
+import org.arend.naming.reference.*
 import org.arend.naming.reference.converter.IdReferableConverter
 import org.arend.prelude.Prelude
 import org.arend.prelude.PreludeResourceLibrary
@@ -85,10 +81,12 @@ class ArendServices : WorkspaceService, TextDocumentService {
           if (node is Concrete.ReferenceExpression) node.referent.refName.length
           else length
         }
+
         else -> length
       }
       Diagnostic(cause.toRange(len), it.toString(), severity(it), "Arend")
     }
+
     is TCReferable -> diagnostic(cause.data, it, cause.refName.length)
     is Definition -> diagnostic(cause.referable, it, cause.name.length)
     is Concrete.ReferenceExpression -> diagnostic(cause.data, it, cause.referent.refName.length)
@@ -156,6 +154,7 @@ class ArendServices : WorkspaceService, TextDocumentService {
     is NotInScopeError -> e.referable?.let { errorUri(it) }
         ?: (e.cause as? AntlrPosition)?.let { errorUri(it) }
         ?: ""
+
     is LocalError -> errorUri(e.definition)
     is ParserError -> errorUri(e.position)
     is LibraryIOError -> describeUri(Paths.get(e.fileName))
@@ -177,7 +176,8 @@ class ArendServices : WorkspaceService, TextDocumentService {
     val loc = ref.location ?: return log("No location for ref ${ref.refName}")
     val lib = libraryManager.getRegisteredLibrary(loc.libraryName)
         as? FileLoadableHeaderLibrary ?: return log("Not a loaded library: ${loc.libraryName}")
-    val path = loc.modulePath?.let { pathOf(lib, it) } ?: return log("Cannot find a path corresponds to ${loc.modulePath}")
+    val path = loc.modulePath?.let { pathOf(lib, it) }
+        ?: return log("Cannot find a path corresponds to ${loc.modulePath}")
     return describeUri(path)
   }
 
@@ -191,7 +191,8 @@ class ArendServices : WorkspaceService, TextDocumentService {
         return
       }
       IO.i("Reloading module $modulePath from library ${lib.name}'s ${
-      if (inTests) "test" else "source"} directory")
+        if (inTests) "test" else "source"
+      } directory")
       if (inTests) IO.w("Currently test reloading doesn't work properly")
       val loader = SourceLoader(lib, libraryManager)
       loader.preloadRaw(modulePath, inTests)
@@ -224,13 +225,14 @@ class ArendServices : WorkspaceService, TextDocumentService {
 
     val topGroup = lib.getModuleGroup(modulePath, inTests)
         ?: return@supplyAsync Either.forLeft(mutableListOf())
-    val searchGroup = topGroup.statements.lastOrNull { stmt ->
+    val searchGroup = topGroup.statements.asSequence().mapNotNull { it.group }.lastOrNull { group ->
       // This may fail, but no failure is observed so far
-      val ref = stmt.group?.referable as ConcreteLocatedReferable ?: return@lastOrNull false
-      ref.data!!.line <= inPos.line + 1
+      val ref = group.referable as? ConcreteLocatedReferable ?: return@lastOrNull false
+      val data = ref.data as? AntlrPosition ?: return@lastOrNull false
+      data.line <= inPos.line + 1
     } ?: topGroup
-    val nsCmd = topGroup.statements.firstOrNull { stmt ->
-      if (stmt.namespaceCommand is SimpleNamespaceCommand) nsCmd.data.line == inPos.line + 1 else false
+    val nsCmd = topGroup.statements.asSequence().mapNotNull { it.namespaceCommand }.firstOrNull { nsCmd ->
+        if (nsCmd is SimpleNamespaceCommand) nsCmd.data.line == inPos.line + 1 else false
     }
     if (nsCmd == null) searchGroup.traverseGroup { group ->
       when (val ref = group.referable) {
@@ -265,18 +267,20 @@ class ArendServices : WorkspaceService, TextDocumentService {
       val nameLength = referent.refName.length
       if (refPos.contains(inPos, nameLength)) when (referent) {
         is ConcreteLocatedReferable -> {
-          val defPos = referent.data ?: return super.visitReference(expr, unit)
+          val defPos = referent.data as? AntlrPosition ?: return super.visitReference(expr, unit)
           val file = pathOf(lib, defPos.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
           val range = defPos.toRange(nameLength)
           resolved.add(LocationLink(describeUri(file), nextLine(range.start), range, refPos.toRange(nameLength)))
         }
+
         is ParsedLocalReferable -> {
           val file = pathOf(lib, referent.position.module)?.toAbsolutePath()
               ?: return super.visitReference(expr, unit)
           val range = referent.position.toRange(nameLength)
           resolved.add(LocationLink(describeUri(file), nextLine(range.start), range, refPos.toRange(nameLength)))
         }
+
         is LocatedReferableImpl -> IO.w("Prelude definitions aren't supported yet")
         else -> IO.w("Unsupported reference: ${referent.javaClass}")
       }
