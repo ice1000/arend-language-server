@@ -2,11 +2,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 val projectArend = gradle.includedBuild("Arend")
 group = "org.ice1000.arend.lsp"
-version = "0.3.0"
+version = "0.4.0"
 
 plugins {
   idea
-  kotlin("jvm") version "1.5.30"
+  kotlin("jvm") version "1.8.10"
 }
 
 repositories {
@@ -17,7 +17,7 @@ dependencies {
   implementation("org.arend:base")
   implementation("org.arend:cli")
   implementation("org.arend:parser")
-  val lsp4jVersion = "0.11.0"
+  val lsp4jVersion = "0.19.0"
   // Don't forget to keep it up-to-date with Arend
   val cliVersion = "1.4"
   val antlrVersion = "4.8"
@@ -28,15 +28,16 @@ dependencies {
 }
 
 java {
-  sourceCompatibility = JavaVersion.VERSION_11
-  targetCompatibility = JavaVersion.VERSION_11
+  sourceCompatibility = JavaVersion.VERSION_17
+  targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks.withType<KotlinCompile>().configureEach {
   kotlinOptions {
-    jvmTarget = "11"
-    languageVersion = "1.5"
-    apiVersion = "1.5"
+    jvmTarget = "17"
+    languageVersion = "1.8"
+    apiVersion = "1.8"
+    useK2 = true
     freeCompilerArgs = listOf("-Xjvm-default=enable")
   }
 }
@@ -69,5 +70,5 @@ val copyJarDep = tasks.register<Copy>("copyJarDep") {
 }
 
 tasks.withType<Wrapper> {
-  gradleVersion = "6.7"
+  gradleVersion = "8.0-rc-2"
 }
