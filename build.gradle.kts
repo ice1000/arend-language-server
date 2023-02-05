@@ -38,7 +38,7 @@ tasks.withType<KotlinCompile>().configureEach {
     languageVersion = "1.8"
     apiVersion = "1.8"
     useK2 = true
-    freeCompilerArgs = listOf("-Xjvm-default=enable")
+    freeCompilerArgs = listOf("-Xjvm-default=all")
   }
 }
 
@@ -51,7 +51,7 @@ idea {
 
 val jarDep = tasks.register<Jar>("jarDep") {
   group = "build"
-  dependsOn(projectArend.task(":cli:jar"), projectArend.task(":base:jar"))
+  dependsOn(projectArend.task(":cli:jar"), projectArend.task(":base:jar"), tasks.jar)
   manifest.attributes["Main-Class"] = "${project.group}.ServerKt"
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
   from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it as Any else zipTree(it) }) {
@@ -64,7 +64,7 @@ val jarDep = tasks.register<Jar>("jarDep") {
 val copyJarDep = tasks.register<Copy>("copyJarDep") {
   dependsOn(jarDep)
   from(jarDep.get().archiveFile.get().asFile)
-  into(System.getProperty("user.dir"))
+  into(rootProject.buildDir.resolve("server"))
   rename { "lsp.jar" }
   outputs.upToDateWhen { false }
 }
