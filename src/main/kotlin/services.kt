@@ -13,7 +13,7 @@ import org.arend.frontend.group.SimpleNamespaceCommand
 import org.arend.frontend.library.FileLoadableHeaderLibrary
 import org.arend.frontend.parser.BuildVisitor
 import org.arend.frontend.parser.ParserError
-import org.arend.frontend.reference.ConcreteLocatedReferable
+import org.arend.naming.reference.ConcreteLocatedReferable
 import org.arend.frontend.reference.ParsedLocalReferable
 import org.arend.frontend.repl.CommonCliRepl
 import org.arend.library.Library
@@ -224,13 +224,13 @@ class ArendServices : WorkspaceService, TextDocumentService {
 
     val topGroup = lib.getModuleGroup(modulePath, inTests)
         ?: return@supplyAsync Either.forLeft(mutableListOf())
-    val searchGroup = topGroup.subgroups.lastOrNull { group ->
+    val searchGroup = topGroup.statements.lastOrNull { stmt ->
       // This may fail, but no failure is observed so far
-      val ref = group.referable as ConcreteLocatedReferable
+      val ref = stmt.group?.referable as ConcreteLocatedReferable ?: return@lastOrNull false
       ref.data!!.line <= inPos.line + 1
     } ?: topGroup
-    val nsCmd = topGroup.namespaceCommands.firstOrNull { nsCmd ->
-      if (nsCmd is SimpleNamespaceCommand) nsCmd.data.line == inPos.line + 1 else false
+    val nsCmd = topGroup.statements.firstOrNull { stmt ->
+      if (stmt.namespaceCommand is SimpleNamespaceCommand) nsCmd.data.line == inPos.line + 1 else false
     }
     if (nsCmd == null) searchGroup.traverseGroup { group ->
       when (val ref = group.referable) {
