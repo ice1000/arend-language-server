@@ -82,8 +82,8 @@ class ArendLanguageServer : LanguageServer, LanguageClientAware {
       }
     }
     // val clientCapabilities = params.capabilities
-    params.rootUri?.let { uri ->
-      sabisu.registerLibrary(Paths.get(parseURI(uri)))
+    params.workspaceFolders.forEach { uri ->
+      sabisu.registerLibrary(Paths.get(parseURI(uri.uri)))
     }
 
     sabisu.reload()

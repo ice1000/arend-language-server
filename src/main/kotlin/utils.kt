@@ -63,7 +63,7 @@ data class Description(
 
 val emptyRange = Range(Position(), Position())
 
-fun moduleNameLength(names: Collection<String>) = names.sumBy { it.length + 1 }.let { it - 1 }
+fun moduleNameLength(names: Collection<String>) = names.sumOf { it.length + 1 }.let { it - 1 }
 
 fun ArendServices.describe(uri: String): Description? {
   val path = Paths.get(parseURI(uri))
